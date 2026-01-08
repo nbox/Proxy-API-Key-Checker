@@ -14,6 +14,14 @@ Desktop app to validate API keys for popular services and run batch checks with 
 
 Releases: https://github.com/nbox/API-Key-Health-Checker/releases
 
+## macOS Gatekeeper
+
+⚠️ macOS may block unsigned builds downloaded from GitHub. If you trust the app, remove the quarantine attribute:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/API Key Health Checker.app"
+```
+
 ## Features
 
 - Service adapters: OpenAI, Gemini, YouTube, Custom

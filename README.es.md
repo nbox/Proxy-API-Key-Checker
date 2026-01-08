@@ -13,6 +13,14 @@ Aplicación de escritorio para validar claves API de servicios populares y ejecu
 ## Descargar
 Lanzamientos: https://github.com/nbox/API-Key-Health-Checker/releases
 
+## macOS Gatekeeper
+
+⚠️ macOS puede bloquear compilaciones sin firma descargadas desde GitHub. Si confías en la app, elimina el atributo de cuarentena:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/API Key Health Checker.app"
+```
+
 ## Funciones
 - Adaptadores de servicio: OpenAI, Gemini, YouTube, Custom
 - Comprobaciones por lotes con concurrencia, retraso aleatorio (jitter), reintentos y limitador global de RPS

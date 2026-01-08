@@ -13,6 +13,14 @@ GitHub: https://github.com/nbox/API-Key-Health-Checker
 ## Скачать
 Релизы: https://github.com/nbox/API-Key-Health-Checker/releases
 
+## macOS Gatekeeper
+
+⚠️ macOS может блокировать неподписанные сборки, скачанные с GitHub. Если вы доверяете приложению, удалите атрибут карантина:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/API Key Health Checker.app"
+```
+
 ## Возможности
 - Адаптеры: OpenAI, Gemini, YouTube, Custom
 - Пакетные проверки с параллельностью, случайной задержкой (jitter), ретраями, глобальным лимитом RPS
