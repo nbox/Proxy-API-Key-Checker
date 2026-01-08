@@ -1,0 +1,146 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  version-check:
+    name: Version check
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      tag: ${{ steps.check.outputs.tag }}
+      should_build: ${{ steps.check.outputs.should_build }}
+      should_release: ${{ steps.check.outputs.should_release }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+
+      - name: Check version
+        id: check
+        run: |
+          set -euo pipefail
+          SHOULD_BUILD="true"
+          SHOULD_RELEASE="true"
+
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            TAG_NAME="${GITHUB_REF_NAME}"
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="$(node -p "require('./package.json').version")"
+            TAG_NAME="v${VERSION}"
+          fi
+
+          if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF_TYPE}" != "tag" ]]; then
+            BEFORE_SHA="$(node -p "require(process.env.GITHUB_EVENT_PATH).before")"
+            if [[ -n "${BEFORE_SHA}" && "${BEFORE_SHA}" != "0000000000000000000000000000000000000000" ]]; then
+              if git show "${BEFORE_SHA}:package.json" >/dev/null 2>&1; then
+                PREV_VERSION="$(git show "${BEFORE_SHA}:package.json" | node -e "const fs=require('fs'); const pkg=JSON.parse(fs.readFileSync(0,'utf8')); console.log(pkg.version||'');")"
+                if [[ "${PREV_VERSION}" == "${VERSION}" ]]; then
+                  SHOULD_BUILD="false"
+                  SHOULD_RELEASE="false"
+                fi
+              fi
+            fi
+          fi
+
+          if [[ "${GITHUB_REF_TYPE}" != "tag" ]]; then
+            if git show-ref --tags --quiet "refs/tags/${TAG_NAME}"; then
+              SHOULD_RELEASE="false"
+            fi
+          fi
+
+          if [[ "${SHOULD_BUILD}" != "true" ]]; then
+            SHOULD_RELEASE="false"
+          fi
+
+          {
+            echo "version=${VERSION}"
+            echo "tag=${TAG_NAME}"
+            echo "should_build=${SHOULD_BUILD}"
+            echo "should_release=${SHOULD_RELEASE}"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build (${{ matrix.os }})
+    needs: version-check
+    if: needs.version-check.outputs.should_build == 'true'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            artifact_name: release-macos
+            artifact_path: release/*.dmg
+          - os: windows-latest
+            artifact_name: release-windows
+            artifact_path: release/*.exe
+          - os: ubuntu-latest
+            artifact_name: release-linux
+            artifact_path: release/*.AppImage
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build release
+        run: npm run dist -- --publish=never
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [version-check, build]
+    if: needs.version-check.outputs.should_release == 'true'
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: release-artifacts
+
+      - name: Publish release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
+        with:
+          tag_name: ${{ needs.version-check.outputs.tag }}
+          name: API Key Health Checker ${{ needs.version-check.outputs.version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            release-artifacts/**/*.dmg
+            release-artifacts/**/*.exe
+            release-artifacts/**/*.AppImage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

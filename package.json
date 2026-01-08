@@ -1,0 +1,93 @@
+{
+  "name": "api-key-health-checker",
+  "version": "1.0.0",
+  "description": "Desktop app to validate API keys for OpenAI, Gemini, YouTube, and custom endpoints with batch checks, rate limits, and reports.",
+  "license": "BSD-3-Clause",
+  "author": "nbox (https://github.com/nbox)",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "dev": "concurrently -k \"vite\" \"tsc -p tsconfig.main.json -w\" \"wait-on dist/main/main.js && electron .\"",
+    "build": "tsc -p tsconfig.main.json && vite build",
+    "preview": "vite preview",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "node -e \"const fs=require('fs'); for (const p of ['dist','release']) { if (fs.existsSync(p)) fs.rmSync(p,{recursive:true,force:true}); }\" && npm run build && electron-builder"
+  },
+  "dependencies": {
+    "iconv-lite": "^0.6.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.19",
+    "@types/react": "^18.2.56",
+    "@types/react-dom": "^18.2.19",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.17",
+    "concurrently": "^8.2.2",
+    "electron": "^30.0.1",
+    "electron-builder": "^24.13.3",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.4.2",
+    "vite": "^5.1.4",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.nbox",
+    "productName": "API Key Health Checker",
+    "mac": {
+      "icon": "resources/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "icon": "assets/logo.png",
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "icon": "assets/logo.png",
+      "target": [
+        "AppImage"
+      ]
+    },
+    "dmg": {
+      "window": {
+        "width": 540,
+        "height": 420
+      },
+      "background": "resources/dmg-background.png",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "files": [
+      "dist/main/**/*",
+      "dist/renderer/**/*",
+      "dist/shared/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "resources",
+      "output": "release"
+    },
+    "asar": true
+  }
+}
