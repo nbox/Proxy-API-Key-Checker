@@ -21,12 +21,6 @@ brew install --cask nbox/tap/api-key-health-checker
 Uninstall:
 
 ```bash
-brew uninstall --cask api-key-health-checker
-```
-
-Remove app data:
-
-```bash
 brew uninstall --cask --zap api-key-health-checker
 ```
 
