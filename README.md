@@ -8,7 +8,27 @@
 
 Desktop app to validate API keys for popular services and run batch checks with rate limits and reports. Supports OpenAI (ChatGPT), Google Gemini, YouTube Data API, and custom endpoints.
 
-![Screenshot placeholder](assets/screenshot.png)
+![Screenshot](assets/screenshot.png)
+
+## 🍺 Homebrew (macOS)
+
+Install:
+
+```bash
+brew install --cask nbox/tap/api-key-health-checker
+```
+
+Uninstall:
+
+```bash
+brew uninstall --cask api-key-health-checker
+```
+
+Remove app data:
+
+```bash
+brew uninstall --cask --zap api-key-health-checker
+```
 
 ## Download
 
@@ -16,7 +36,7 @@ Releases: https://github.com/nbox/API-Key-Health-Checker/releases
 
 ## macOS Gatekeeper
 
-⚠️ macOS may block unsigned builds downloaded from GitHub. If you trust the app, remove the quarantine attribute:
+⚠️ macOS may block unsigned builds downloaded from GitHub. If you see the message "app is damaged and can't be opened. You should move it to the Trash", run:
 
 ```bash
 xattr -dr com.apple.quarantine "/Applications/API Key Health Checker.app"
