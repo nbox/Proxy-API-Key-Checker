@@ -134,9 +134,13 @@ jobs:
         id: dmg_shas
         run: |
           set -euo pipefail
-          VERSION="${{ needs.version-check.outputs.version }}"
-          ARM_DMG="release-artifacts/release-macos/API Key Health Checker-${VERSION}-arm64.dmg"
-          INTEL_DMG="release-artifacts/release-macos/API Key Health Checker-${VERSION}-x64.dmg"
+          MAC_DIR="release-artifacts/release-macos"
+
+          ARM_DMG="$(find "$MAC_DIR" -maxdepth 1 -type f -name '*-arm64.dmg' -print -quit)"
+          INTEL_DMG="$(find "$MAC_DIR" -maxdepth 1 -type f -name '*-x64.dmg' -print -quit)"
+
+          [[ -f "$ARM_DMG" ]] || { echo "arm64 dmg not found in $MAC_DIR"; ls -la "$MAC_DIR"; exit 1; }
+          [[ -f "$INTEL_DMG" ]] || { echo "x64 dmg not found in $MAC_DIR"; ls -la "$MAC_DIR"; exit 1; }
 
           echo "ARM_SHA=$(sha256sum "$ARM_DMG" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
           echo "INTEL_SHA=$(sha256sum "$INTEL_DMG" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
