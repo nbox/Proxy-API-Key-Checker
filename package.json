@@ -33,7 +33,7 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.nbox",
+    "appId": "com.nbox.api-key-health-checker",
     "productName": "API Key Health Checker",
     "afterPack": "build/afterPack.cjs",
     "mac": {
