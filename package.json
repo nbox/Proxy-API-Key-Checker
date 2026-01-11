@@ -1,6 +1,6 @@
 {
   "name": "api-key-health-checker",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Desktop app to validate API keys for OpenAI, Gemini, YouTube, and custom endpoints with batch checks, rate limits, and reports.",
   "license": "BSD-3-Clause",
   "author": "nbox (https://github.com/nbox)",
@@ -35,6 +35,7 @@
   "build": {
     "appId": "com.nbox",
     "productName": "API Key Health Checker",
+    "afterPack": "build/afterPack.cjs",
     "mac": {
       "artifactName": "API Key Health Checker-${version}-${arch}.${ext}",
       "icon": "resources/icon.icns",
