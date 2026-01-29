@@ -35,6 +35,14 @@ export const SERVICES: ServiceDefinition[] = [
     keyPattern: /^AIza[0-9A-Za-z-_]{30,}$/
   },
   {
+    id: "proxy",
+    name: "Proxy Checker",
+    description: "HTTP/HTTPS/SOCKS proxy endpoints",
+    docsLink: "",
+    checkMethods: ["auth_only"],
+    keyPattern: /^(?:(?:https?|socks4|socks5):\/\/)?(?:[^@\s]+@)?[^\s:]+:\d{2,5}$/i
+  },
+  {
     id: "custom",
     name: "Custom / Other",
     description: "Bring your own endpoint",

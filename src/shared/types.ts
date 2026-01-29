@@ -1,6 +1,19 @@
-export type ServiceId = "openai" | "youtube" | "gemini" | "custom";
+export type ServiceId = "openai" | "youtube" | "gemini" | "custom" | "proxy";
 
 export type CheckMethod = "auth_only" | "quota" | "sample";
+
+export type ProxyType = "http" | "https" | "socks4" | "socks5";
+
+export type ProxyCheckMode = "validity" | "url";
+
+export interface ProxySettings {
+  types: ProxyType[];
+  speedLimitMs: number;
+  checkMode: ProxyCheckMode;
+  targetUrl: string;
+  htmlCheck?: boolean;
+  htmlCheckText?: string;
+}
 
 export type CheckStatus =
   | "OK"
@@ -32,6 +45,7 @@ export interface ProcessSettings {
   retries: number;
   perProcessMaxRps: number;
   openAiOrgId?: string;
+  proxy?: ProxySettings;
 }
 
 export type CustomAuthType = "bearer" | "header" | "query";
@@ -53,6 +67,9 @@ export interface CheckResult {
   errorCode?: string;
   errorMessage?: string;
   checkedAt: string;
+  proxyType?: ProxyType;
+  checkMode?: ProxyCheckMode;
+  targetUrl?: string;
 }
 
 export interface LogEvent {
@@ -108,6 +125,9 @@ export interface ReportResultItem {
   errorCode?: string;
   errorMessage?: string;
   checkedAt: string;
+  proxyType?: ProxyType;
+  checkMode?: ProxyCheckMode;
+  targetUrl?: string;
 }
 
 export interface ReportPayload {

@@ -37,6 +37,7 @@ export interface ProcessUI {
   activeTab: "logs" | "stats" | "summary";
   logFilter: "all" | "success" | "failed" | "warning";
   search: string;
+  followLogs: boolean;
 }
 
 export interface ExportDialogState {

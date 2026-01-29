@@ -33,6 +33,11 @@ declare global {
         content?: string;
         error?: string;
       }>;
+      fetchProxyAggregators: (payload: { urls: string[]; timeoutMs?: number }) => Promise<{
+        results: { url: string; content?: string; error?: string }[];
+        cancelled?: boolean;
+      }>;
+      cancelProxyAggregators: (payload: { requestId: string }) => Promise<void>;
       startCheck: (payload: unknown) => Promise<StartProcessResponse>;
       pauseProcess: (processId: string) => Promise<void>;
       resumeProcess: (processId: string) => Promise<void>;

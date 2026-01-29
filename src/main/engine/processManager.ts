@@ -129,6 +129,7 @@ export class ProcessManager {
     const run = new ProcessRun({
       id: processId,
       name: payload.name,
+      serviceId: payload.serviceId,
       keys: payload.keys,
       method: payload.settings.method,
       settings: payload.settings,

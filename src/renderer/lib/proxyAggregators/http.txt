@@ -1,0 +1,53 @@
+# Proxifly (HTTP)
+https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/protocols/http/data.txt
+
+# prxchk (HTTP)
+https://raw.githubusercontent.com/prxchk/proxy-list/main/http.txt
+
+# OpenProxyList (HTTP)
+https://www.openproxylist.xyz/http.txt
+
+# Vakhov fresh-proxy-list (HTTP)
+https://vakhov.github.io/fresh-proxy-list/http.txt
+
+# ProxySpace (HTTP)
+https://proxyspace.pro/http.txt
+
+# GeoNode API (HTTP, JSON)
+https://proxylist.geonode.com/api/proxy-list?limit=500&page=1&sort_by=lastChecked&sort_type=desc&protocols=http
+
+# Proxy-List.Download (HTTP)
+https://www.proxy-list.download/api/v1/get?type=http
+
+# ShiftyTR (HTTP)
+https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/http.txt
+
+# jetkai (HTTP)
+https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-http.txt
+
+# ProxyScraper (HTTP)
+https://raw.githubusercontent.com/ProxyScraper/ProxyScraper/main/http.txt
+
+# Zaeem20 (HTTP)
+https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/master/http.txt
+
+# SoliSpirit (HTTP)
+https://raw.githubusercontent.com/SoliSpirit/proxy-list/main/http.txt
+
+# monosans (HTTP)
+https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/http.txt
+
+# mmpx12 (HTTP)
+https://raw.githubusercontent.com/mmpx12/proxy-list/master/http.txt
+
+# MuRongPIG Proxy-Master (HTTP)
+https://raw.githubusercontent.com/MuRongPIG/Proxy-Master/main/http.txt
+
+# mzyui (HTTP)
+https://raw.githubusercontent.com/mzyui/proxy-list/main/http.txt
+
+# proxy4parsing (HTTP)
+https://raw.githubusercontent.com/proxy4parsing/proxy-list/main/http.txt
+
+# ProxyScrape API (HTTP)
+https://api.proxyscrape.com/v4/free-proxy-list/get?request=displayproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all&skip=0&limit=2000

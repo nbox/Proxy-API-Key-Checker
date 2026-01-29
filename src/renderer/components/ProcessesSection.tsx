@@ -18,6 +18,7 @@ interface ProcessesSectionProps {
   onPause: (processId: string) => void;
   onResume: (processId: string) => void;
   onStop: (processId: string) => void;
+  onRemove: (processId: string) => void;
   onCopyFull: (process: ProcessUI) => void;
   onExportMasked: (process: ProcessUI, format: ExportFormat) => void;
   onExportFullRequest: (processId: string) => void;
@@ -36,6 +37,7 @@ export function ProcessesSection({
   onPause,
   onResume,
   onStop,
+  onRemove,
   onCopyFull,
   onExportMasked,
   onExportFullRequest
@@ -94,6 +96,7 @@ export function ProcessesSection({
             onPause={() => onPause(process.id)}
             onResume={() => onResume(process.id)}
             onStop={() => onStop(process.id)}
+            onRemove={() => onRemove(process.id)}
             onCopyFull={() => onCopyFull(process)}
             onExportMasked={(format) => onExportMasked(process, format)}
             onExportFullRequest={() => onExportFullRequest(process.id)}

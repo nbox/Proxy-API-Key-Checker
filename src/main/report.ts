@@ -20,7 +20,10 @@ function buildCsv(payload: ReportPayload, includeFull: boolean) {
     "latency_ms",
     "error_code",
     "error_message",
-    "checked_at"
+    "checked_at",
+    "proxy_type",
+    "check_mode",
+    "target_url"
   ].filter(Boolean) as string[];
 
   const lines = [headers.join(",")];
@@ -36,7 +39,10 @@ function buildCsv(payload: ReportPayload, includeFull: boolean) {
       String(item.latencyMs ?? 0),
       item.errorCode ?? "",
       sanitizeErrorMessage(item.errorMessage ?? ""),
-      item.checkedAt
+      item.checkedAt,
+      item.proxyType ?? "",
+      item.checkMode ?? "",
+      item.targetUrl ?? ""
     );
     lines.push(row.map(csvEscape).join(","));
   }
@@ -53,7 +59,10 @@ function buildJson(payload: ReportPayload, includeFull: boolean) {
       latency_ms: item.latencyMs,
       error_code: item.errorCode ?? null,
       error_message: sanitizeErrorMessage(item.errorMessage ?? ""),
-      checked_at: item.checkedAt
+      checked_at: item.checkedAt,
+      proxy_type: item.proxyType ?? null,
+      check_mode: item.checkMode ?? null,
+      target_url: item.targetUrl ?? null
     };
 
     if (includeFull) {

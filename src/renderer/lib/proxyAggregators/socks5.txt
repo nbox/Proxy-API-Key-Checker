@@ -1,0 +1,60 @@
+# Proxifly (обновление каждые ~5 минут)
+https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/protocols/socks5/data.txt
+https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/protocols/socks5/data.txt
+
+# vakhov/fresh-proxy-list (daily)
+https://vakhov.github.io/fresh-proxy-list/socks5.txt
+
+# fyvri/fresh-proxy-list (hourly)
+https://raw.githubusercontent.com/fyvri/fresh-proxy-list/archive/storage/classic/socks5.txt
+
+# r00tee/Proxy-List (каждые ~5 минут)
+https://raw.githubusercontent.com/r00tee/Proxy-List/main/Socks5.txt
+
+# roosterkid/openproxylist (hourly)
+https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS5.txt
+https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS5_RAW.txt
+
+# ShiftyTR/Proxy-List (hourly)
+https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks5.txt
+
+# jetkai/proxy-list (hourly)
+https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-socks5.txt
+
+# SoliSpirit/proxy-list (каждые ~3 часа)
+https://raw.githubusercontent.com/SoliSpirit/proxy-list/main/socks5.txt
+
+# mmpx12/proxy-list (auto, часто)
+https://raw.githubusercontent.com/mmpx12/proxy-list/master/socks5.txt
+
+# ProxyScraper/ProxyScraper (каждые ~30 минут)
+https://raw.githubusercontent.com/ProxyScraper/ProxyScraper/main/socks5.txt
+
+# prxchk/proxy-list (каждые ~10 минут)
+https://raw.githubusercontent.com/prxchk/proxy-list/main/socks5.txt
+
+# KangProxy (daily)
+https://raw.githubusercontent.com/officialputuid/KangProxy/KangProxy/socks5/socks5.txt
+
+# ProxySpace (примерно каждые ~20 минут)
+https://proxyspace.pro/socks5.txt
+
+# OpenProxyList API
+https://api.openproxylist.xyz/socks5.txt
+
+# ProxyScrape API
+https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks5
+https://api.proxyscrape.com/?request=displayproxies&proxytype=socks5
+
+# Proxy-List.Download API
+https://proxy-list.download/api/v1/get?type=socks5
+https://www.proxy-list.download/api/v1/get?type=socks5
+
+# ProxyScan
+https://proxyscan.io/download?type=socks5
+
+# OpenProxy.Space API
+https://api.openproxy.space/lists/socks5
+
+# hookzof/socks5_list (часто обновляется)
+https://raw.githubusercontent.com/hookzof/socks5_list/master/proxy.txt

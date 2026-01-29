@@ -1,4 +1,12 @@
-import type { CheckMethod, CheckStatus, CustomServiceConfig, ServiceId } from "../../shared/types";
+import type {
+  CheckMethod,
+  CheckStatus,
+  CustomServiceConfig,
+  ProxyCheckMode,
+  ProxySettings,
+  ProxyType,
+  ServiceId
+} from "../../shared/types";
 
 export interface AdapterRequest {
   key: string;
@@ -7,6 +15,7 @@ export interface AdapterRequest {
   signal?: AbortSignal;
   customConfig?: CustomServiceConfig;
   openAiOrgId?: string;
+  proxySettings?: ProxySettings;
 }
 
 export interface AdapterResult {
@@ -17,6 +26,9 @@ export interface AdapterResult {
   retryable: boolean;
   retryAfterMs?: number;
   latencyMs: number;
+  proxyType?: ProxyType;
+  checkMode?: ProxyCheckMode;
+  targetUrl?: string;
 }
 
 export interface ServiceAdapter {

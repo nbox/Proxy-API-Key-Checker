@@ -1,4 +1,4 @@
-import type { CheckStatus, ExportFormat, ProcessStatus } from "../../shared/types";
+import type { CheckStatus, ExportFormat, ProcessStatus, ProxyType } from "../../shared/types";
 import { t, type Locale } from "../lib/i18n";
 import { statusBuckets } from "../lib/report";
 import { STATUS_LABELS, STATUS_RECOMMENDATIONS, STATUS_TONES, isSuccess, isWarning } from "../lib/status";
@@ -14,6 +14,7 @@ interface ProcessCardProps {
   onPause: () => void;
   onResume: () => void;
   onStop: () => void;
+  onRemove: () => void;
   onCopyFull: () => void;
   onExportMasked: (format: ExportFormat) => void;
   onExportFullRequest: () => void;
@@ -89,6 +90,7 @@ export function ProcessCard({
   onPause,
   onResume,
   onStop,
+  onRemove,
   onCopyFull,
   onExportMasked,
   onExportFullRequest
@@ -96,11 +98,51 @@ export function ProcessCard({
   const progress = process.total
     ? Math.min(100, Math.round((process.processed / process.total) * 100))
     : 0;
+  const processedCount = process.processed;
   const successCount = process.stats.success;
   const invalidCount = process.stats.invalid;
+  const successPortion = processedCount
+    ? Math.min(100, (successCount / processedCount) * 100)
+    : 0;
+  const failurePortion = processedCount ? Math.max(0, 100 - successPortion) : 0;
   const average = averageLatency(process.stats.latencies);
   const median = medianLatency(process.stats.latencies);
   const reasons = statusBuckets(process.results);
+  const isProxyService = process.serviceId === "proxy";
+  const validLabel = isProxyService ? t(locale, "validProxies") : t(locale, "validKeys");
+  const successHeaderLabel = t(locale, "successLabel");
+  const searchPlaceholder = isProxyService ? t(locale, "searchProxy") : t(locale, "searchKey");
+  const proxyTypeBuckets: Record<ProxyType, string[]> = {
+    http: [],
+    https: [],
+    socks4: [],
+    socks5: []
+  };
+  const proxyTypeCopyBuckets: Record<ProxyType, string[]> = {
+    http: [],
+    https: [],
+    socks4: [],
+    socks5: []
+  };
+  if (isProxyService) {
+    for (const item of process.results) {
+      if (item.status !== "OK" || !item.proxyType) {
+        continue;
+      }
+      const displayKey = hideFullKeys ? item.keyMasked : item.keyFull ?? item.keyMasked;
+      const fullKey = item.keyFull ?? displayKey;
+      proxyTypeBuckets[item.proxyType].push(displayKey);
+      proxyTypeCopyBuckets[item.proxyType].push(fullKey);
+    }
+  }
+
+  const copyProxyType = (type: ProxyType) => {
+    const payload = proxyTypeCopyBuckets[type].filter(Boolean).join("\n");
+    if (!payload) {
+      return;
+    }
+    navigator.clipboard.writeText(payload).catch(() => undefined);
+  };
 
   return (
     <div className="glass-card rounded-3xl p-5">
@@ -123,7 +165,12 @@ export function ProcessCard({
           </span>
           {process.status === "Finished" ? (
             <span className="text-xs text-ink-500">
-              {t(locale, "validKeys")}: {successCount} · {t(locale, "invalidLabel")}: {invalidCount}
+              {validLabel}: {successCount} · {t(locale, "invalidLabel")}: {invalidCount}
+            </span>
+          ) : null}
+          {process.status !== "Finished" ? (
+            <span className="text-xs text-emerald-600">
+              {successHeaderLabel}: {successCount}
             </span>
           ) : null}
           <span className="text-xs text-ink-400">
@@ -164,14 +211,30 @@ export function ProcessCard({
               {t(locale, "stop")}
             </button>
           ) : null}
+          <button
+            className="rounded-full border border-ink-200 bg-white px-3 py-1 text-xs text-ink-500"
+            title={t(locale, "removeProcess")}
+            onClick={(event) => {
+              event.stopPropagation();
+              onRemove();
+            }}
+          >
+            ✕
+          </button>
         </div>
         <div className="w-full">
           <div className="flex items-center gap-3">
-            <div className="progress-track h-3 flex-1 rounded-full">
-              <div
-                className="progress-fill h-3 rounded-full"
-                style={{ width: `${progress}%` }}
-              ></div>
+            <div className="progress-track h-3 flex-1 overflow-hidden rounded-full">
+              <div className="flex h-3" style={{ width: `${progress}%` }}>
+                <div
+                  className="h-3 bg-emerald-500"
+                  style={{ width: `${successPortion}%` }}
+                />
+                <div
+                  className="h-3 bg-rose-500"
+                  style={{ width: `${failurePortion}%` }}
+                />
+              </div>
             </div>
             <span className="text-xs text-ink-400">{progress}%</span>
           </div>
@@ -223,9 +286,17 @@ export function ProcessCard({
                     {filter.label}
                   </button>
                 ))}
+                <label className="flex items-center gap-2 text-xs text-ink-500">
+                  <input
+                    type="checkbox"
+                    checked={process.followLogs}
+                    onChange={(event) => onUpdate({ followLogs: event.target.checked })}
+                  />
+                  {t(locale, "followLogs")}
+                </label>
                 <input
                   className="rounded-full border border-ink-200 bg-white/70 px-3 py-1 text-xs"
-                  placeholder={t(locale, "searchKey")}
+                  placeholder={searchPlaceholder}
                   value={process.search}
                   onChange={(event) => onUpdate({ search: event.target.value })}
                 />
@@ -234,6 +305,7 @@ export function ProcessCard({
                 items={filteredLogs(process, hideFullKeys)}
                 height={260}
                 hideFullKeys={hideFullKeys}
+                follow={process.followLogs}
               />
             </div>
           ) : null}
@@ -348,25 +420,60 @@ export function ProcessCard({
                 </div>
               </div>
               <div className="rounded-2xl border border-white/60 bg-white/70 p-4">
-                <div className="text-xs text-ink-400">{t(locale, "validKeys")}</div>
-                <div className="mt-2 grid gap-2 text-xs text-ink-500">
-                  {process.results
-                    .filter((item) => item.status === "OK")
-                    .slice(0, 8)
-                    .map((item) => {
-                      const displayKey = hideFullKeys
-                        ? item.keyMasked
-                        : item.keyFull ?? item.keyMasked;
-                      return (
-                        <div key={`${item.keyMasked}-${item.checkedAt}`} className="font-mono">
-                          {displayKey}
+                <div className="text-xs text-ink-400">{validLabel}</div>
+                {isProxyService ? (
+                  <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    {(["http", "https", "socks4", "socks5"] as ProxyType[]).map((type) => (
+                      <div
+                        key={type}
+                        className="flex flex-col rounded-2xl border border-white/60 bg-white/80 p-3"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-xs font-semibold text-ink-500">
+                            {type.toUpperCase()}
+                          </div>
+                          <button
+                            className="rounded-full border border-ink-200 bg-white px-3 py-1 text-[11px] text-ink-500"
+                            onClick={() => copyProxyType(type)}
+                            disabled={proxyTypeCopyBuckets[type].length === 0}
+                          >
+                            {t(locale, "copyTypeList")}
+                          </button>
                         </div>
-                      );
-                    })}
-                  {process.results.filter((item) => item.status === "OK").length > 8 ? (
-                    <div className="text-xs text-ink-400">+ more</div>
-                  ) : null}
-                </div>
+                        <div className="mt-2 max-h-44 overflow-y-auto pr-1 text-xs text-ink-500">
+                          {proxyTypeBuckets[type].length === 0 ? (
+                            <div className="text-xs text-ink-400">-</div>
+                          ) : (
+                            proxyTypeBuckets[type].map((item, index) => (
+                              <div key={`${type}-${index}`} className="font-mono">
+                                {item}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-2 grid gap-2 text-xs text-ink-500">
+                    {process.results
+                      .filter((item) => item.status === "OK")
+                      .slice(0, 8)
+                      .map((item) => {
+                        const displayKey = hideFullKeys
+                          ? item.keyMasked
+                          : item.keyFull ?? item.keyMasked;
+                        return (
+                          <div key={`${item.keyMasked}-${item.checkedAt}`} className="font-mono">
+                            {displayKey}
+                          </div>
+                        );
+                      })}
+                    {process.results.filter((item) => item.status === "OK").length > 8 ? (
+                      <div className="text-xs text-ink-400">+ more</div>
+                    ) : null}
+                  </div>
+                )}
               </div>
             </div>
           ) : null}

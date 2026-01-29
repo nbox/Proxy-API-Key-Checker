@@ -4,6 +4,13 @@ import type { ExportFormat, ReportPayload } from "../shared/types";
 contextBridge.exposeInMainWorld("api", {
   getAppVersion: () => ipcRenderer.invoke("get-app-version"),
   openKeyFile: (payload: { encoding: string }) => ipcRenderer.invoke("open-key-file", payload),
+  fetchProxyAggregators: (payload: {
+    urls: string[];
+    timeoutMs?: number;
+    requestId?: string;
+  }) => ipcRenderer.invoke("fetch-proxy-aggregators", payload),
+  cancelProxyAggregators: (payload: { requestId: string }) =>
+    ipcRenderer.invoke("cancel-proxy-aggregators", payload),
   startCheck: (payload: unknown) => ipcRenderer.invoke("start-check", payload),
   pauseProcess: (processId: string) => ipcRenderer.invoke("pause-check", processId),
   resumeProcess: (processId: string) => ipcRenderer.invoke("resume-check", processId),

@@ -17,11 +17,18 @@ type CopyKey =
   | "randomDelay"
   | "randomDelayHint"
   | "jitter"
+  | "jitterHint"
   | "concurrency"
+  | "concurrencyHint"
   | "timeout"
+  | "timeoutHint"
+  | "timeoutTooltip"
   | "retries"
+  | "retriesHint"
   | "maxKeys"
   | "maxRps"
+  | "maxKeysHint"
+  | "maxRpsHint"
   | "customSettings"
   | "startCheck"
   | "disclaimerTitle"
@@ -35,11 +42,13 @@ type CopyKey =
   | "clearProcessesStop"
   | "clearProcessesKeep"
   | "logs"
+  | "followLogs"
   | "stats"
   | "summary"
   | "pause"
   | "resume"
   | "stop"
+  | "removeProcess"
   | "exportMasked"
   | "exportFull"
   | "confirmExport"
@@ -69,6 +78,7 @@ type CopyKey =
   | "failedStart"
   | "customBaseRequired"
   | "copyFullList"
+  | "copyTypeList"
   | "validKeys"
   | "statusCompleted"
   | "statusCancelled"
@@ -94,7 +104,37 @@ type CopyKey =
   | "methodSampleOption"
   | "methodAuthOnlyHint"
   | "methodQuotaHint"
-  | "methodSampleHint";
+  | "methodSampleHint"
+  | "proxyInputTitle"
+  | "proxyInputHint"
+  | "proxyCount"
+  | "proxyFormatWarning"
+  | "proxyLimitWarning"
+  | "proxyAggregatorsTitle"
+  | "proxyAggregatorsHint"
+  | "proxyAggregatorsFailed"
+  | "proxyAggregatorsLoading"
+  | "proxyAggregatorsAddHttp"
+  | "proxyAggregatorsAddHttps"
+  | "proxyAggregatorsAddSocks4"
+  | "proxyAggregatorsAddSocks5"
+  | "proxyAggregatorsClear"
+  | "proxyAggregatorsCancel"
+  | "proxyListEmpty"
+  | "proxyTypesLabel"
+  | "proxySpeedTooltip"
+  | "proxySpeedHint"
+  | "proxyTypeLabel"
+  | "proxySpeedLabel"
+  | "proxyCheckModeLabel"
+  | "proxyModeValidity"
+  | "proxyModeUrl"
+  | "proxyTargetUrlLabel"
+  | "proxyHtmlCheckLabel"
+  | "proxyHtmlSearchLabel"
+  | "searchProxy"
+  | "validProxies"
+  | "maxProxies";
 
 export const copy: Record<Locale, Record<CopyKey, string>> = {
   en: {
@@ -120,11 +160,18 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     randomDelay: "Random delay",
     randomDelayHint: "Min/Max in ms",
     jitter: "Jitter",
+    jitterHint: "Adds small randomness to delays.",
     concurrency: "Concurrency",
+    concurrencyHint: "Parallel checks per process.",
     timeout: "Timeout (ms)",
+    timeoutHint: "Hard limit for the whole request (connect + response). If reached, the check is aborted.",
+    timeoutTooltip: "Hard cap; should be higher than proxy speed limit.",
     retries: "Retries",
+    retriesHint: "Extra attempts on failure.",
     maxKeys: "Max keys per run",
     maxRps: "Max requests/sec (per-process)",
+    maxKeysHint: "Limit items per run.",
+    maxRpsHint: "Requests per second per process.",
     customSettings: "Custom service",
     startCheck: "Start new check",
     disclaimerTitle: "Before you start",
@@ -139,11 +186,13 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     clearProcessesStop: "Stop and clear",
     clearProcessesKeep: "Clear finished only",
     logs: "Logs",
+    followLogs: "Follow",
     stats: "Stats",
     summary: "Summary",
     pause: "Pause",
     resume: "Resume",
     stop: "Stop",
+    removeProcess: "Remove",
     exportMasked: "Export masked report",
     exportFull: "Export full keys",
     confirmExport: "Export",
@@ -174,6 +223,7 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     failedStart: "Failed to start check",
     customBaseRequired: "Custom base URL is required",
     copyFullList: "Copy full list",
+    copyTypeList: "Copy list",
     validKeys: "Valid keys",
     statusCompleted: "Completed",
     statusCancelled: "Cancelled",
@@ -193,7 +243,39 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     unknownLabel: "Unknown",
     exportAcknowledge: "I understand the risk and have permission to export full keys",
     openAiOrgLabel: "OpenAI organization (optional)",
-    hideFullKeys: "Hide full keys"
+    hideFullKeys: "Hide full keys",
+    proxyInputTitle: "Proxy list",
+    proxyInputHint: "Paste one proxy per line. Format: USER:PASS@IP:PORT or IP:PORT.",
+    proxyCount: "Proxies",
+    proxyFormatWarning: "Some proxies do not match expected format (warning only)",
+    proxyLimitWarning: "Limit reached, extra proxies will be skipped",
+    proxyAggregatorsTitle: "Aggregator URLs",
+    proxyAggregatorsHint:
+      "One URL per line. Lines starting with # are ignored. Loaded on start and merged with manual list.",
+    proxyAggregatorsFailed: "Failed to load aggregators",
+    proxyAggregatorsLoading: "Loading aggregators...",
+    proxyAggregatorsAddHttp: "Add HTTP",
+    proxyAggregatorsAddHttps: "Add HTTPS",
+    proxyAggregatorsAddSocks4: "Add SOCKS4",
+    proxyAggregatorsAddSocks5: "Add SOCKS5",
+    proxyAggregatorsClear: "Clear",
+    proxyAggregatorsCancel: "Cancel",
+    proxyListEmpty: "Proxy list is empty",
+    proxyTypesLabel: "Proxy types",
+    proxySpeedTooltip: "Soft limit; slower responses are marked too_slow.",
+    proxySpeedHint:
+      "Soft threshold for latency. If exceeded, result is too_slow even if it finishes before timeout.",
+    proxyTypeLabel: "Type",
+    proxySpeedLabel: "Proxy speed (ms)",
+    proxyCheckModeLabel: "Check mode",
+    proxyModeValidity: "Validity",
+    proxyModeUrl: "URL access",
+    proxyTargetUrlLabel: "Target URL",
+    proxyHtmlCheckLabel: "Search text in HTML",
+    proxyHtmlSearchLabel: "Text to find in HTML",
+    searchProxy: "Search by proxy",
+    validProxies: "Valid proxies",
+    maxProxies: "Max proxies per run"
   },
   es: {
     appTitle: "API Key Health Checker",
@@ -218,11 +300,19 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     randomDelay: "Retraso aleatorio",
     randomDelayHint: "Mín/Máx en ms",
     jitter: "Jitter",
+    jitterHint: "Añade variación a los retrasos.",
     concurrency: "Concurrencia",
+    concurrencyHint: "Verificaciones en paralelo por proceso.",
     timeout: "Tiempo de espera (ms)",
+    timeoutHint:
+      "Límite duro para toda la solicitud (conexión + respuesta). Si se alcanza, se aborta.",
+    timeoutTooltip: "Límite duro; debe ser mayor que la velocidad del proxy.",
     retries: "Reintentos",
+    retriesHint: "Intentos extra si falla.",
     maxKeys: "Máx. claves por ejecución",
     maxRps: "Máx. solicitudes/seg (por proceso)",
+    maxKeysHint: "Limita elementos por ejecución.",
+    maxRpsHint: "Solicitudes por segundo por proceso.",
     customSettings: "Servicio personalizado",
     startCheck: "Iniciar verificación",
     disclaimerTitle: "Antes de empezar",
@@ -237,11 +327,13 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     clearProcessesStop: "Detener y limpiar",
     clearProcessesKeep: "Limpiar sin detener",
     logs: "Registros",
+    followLogs: "Seguir",
     stats: "Estadísticas",
     summary: "Resumen",
     pause: "Pausa",
     resume: "Reanudar",
     stop: "Detener",
+    removeProcess: "Eliminar",
     exportMasked: "Exportar (enmascarado)",
     exportFull: "Exportar completo",
     confirmExport: "Exportar",
@@ -273,6 +365,7 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     failedStart: "No se pudo iniciar la verificación",
     customBaseRequired: "Se requiere la URL base personalizada",
     copyFullList: "Copiar lista completa",
+    copyTypeList: "Copiar lista",
     validKeys: "Claves válidas",
     statusCompleted: "Completado",
     statusCancelled: "Cancelado",
@@ -292,7 +385,39 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     unknownLabel: "Desconocido",
     exportAcknowledge: "Entiendo el riesgo y confirmo que tengo permiso para exportar las claves completas",
     openAiOrgLabel: "Organización OpenAI (opcional)",
-    hideFullKeys: "Ocultar claves completas"
+    hideFullKeys: "Ocultar claves completas",
+    proxyInputTitle: "Lista de proxies",
+    proxyInputHint: "Pega un proxy por línea. Formato: USER:PASS@IP:PORT o IP:PORT.",
+    proxyCount: "Proxies",
+    proxyFormatWarning: "Algunos proxies no coinciden con el formato esperado (solo advertencia)",
+    proxyLimitWarning: "Límite alcanzado, se omitirán proxies adicionales",
+    proxyAggregatorsTitle: "URLs de agregadores",
+    proxyAggregatorsHint:
+      "Una URL por línea. Las líneas con # se ignoran. Se cargan al iniciar y se fusionan con la lista manual.",
+    proxyAggregatorsFailed: "No se pudieron cargar los agregadores",
+    proxyAggregatorsLoading: "Cargando agregadores...",
+    proxyAggregatorsAddHttp: "Agregar HTTP",
+    proxyAggregatorsAddHttps: "Agregar HTTPS",
+    proxyAggregatorsAddSocks4: "Agregar SOCKS4",
+    proxyAggregatorsAddSocks5: "Agregar SOCKS5",
+    proxyAggregatorsClear: "Limpiar",
+    proxyAggregatorsCancel: "Cancelar",
+    proxyListEmpty: "La lista de proxies está vacía",
+    proxyTypesLabel: "Tipos de proxy",
+    proxySpeedTooltip: "Límite suave; respuestas lentas marcan too_slow.",
+    proxySpeedHint:
+      "Umbral suave de latencia. Si se supera, el resultado es too_slow aunque termine antes del timeout.",
+    proxyTypeLabel: "Tipo",
+    proxySpeedLabel: "Velocidad del proxy (ms)",
+    proxyCheckModeLabel: "Modo de verificación",
+    proxyModeValidity: "Validez",
+    proxyModeUrl: "Acceso a URL",
+    proxyTargetUrlLabel: "URL objetivo",
+    proxyHtmlCheckLabel: "Buscar texto en HTML",
+    proxyHtmlSearchLabel: "Texto a buscar en HTML",
+    searchProxy: "Buscar por proxy",
+    validProxies: "Proxies válidos",
+    maxProxies: "Máx. proxies por ejecución"
   },
   ru: {
     appTitle: "API Key Health Checker",
@@ -317,11 +442,19 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     randomDelay: "Случайная задержка",
     randomDelayHint: "Мин/Макс в мс",
     jitter: "Джиттер",
+    jitterHint: "Добавляет разброс к задержкам.",
     concurrency: "Параллельность",
+    concurrencyHint: "Параллельные проверки на процесс.",
     timeout: "Таймаут (мс)",
+    timeoutHint:
+      "Жёсткий лимит всего запроса (соединение + ответ). При превышении запрос прерывается.",
+    timeoutTooltip: "Жёсткий лимит; должен быть выше скорости прокси.",
     retries: "Повторы",
+    retriesHint: "Доп. попытки при ошибке.",
     maxKeys: "Макс. ключей за запуск",
     maxRps: "Макс. запросов/сек (на процесс)",
+    maxKeysHint: "Лимит количества за запуск.",
+    maxRpsHint: "Запросов в секунду на процесс.",
     customSettings: "Пользовательский сервис",
     startCheck: "Запустить проверку",
     disclaimerTitle: "Перед началом",
@@ -336,11 +469,13 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     clearProcessesStop: "Остановить и очистить",
     clearProcessesKeep: "Очистить без остановки",
     logs: "Логи",
+    followLogs: "Следить",
     stats: "Статистика",
     summary: "Сводка",
     pause: "Пауза",
     resume: "Продолжить",
     stop: "Стоп",
+    removeProcess: "Удалить",
     exportMasked: "Экспортировать (маскировано)",
     exportFull: "Экспортировать полностью",
     confirmExport: "Экспортировать",
@@ -372,6 +507,7 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     failedStart: "Не удалось запустить проверку",
     customBaseRequired: "Нужно указать базовый URL",
     copyFullList: "Скопировать полный список",
+    copyTypeList: "Скопировать список",
     validKeys: "Валидные ключи",
     statusCompleted: "Завершено",
     statusCancelled: "Отменено",
@@ -391,7 +527,39 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     unknownLabel: "Неизвестно",
     exportAcknowledge: "Понимаю риск и подтверждаю право экспорта полных ключей",
     openAiOrgLabel: "OpenAI организация (опционально)",
-    hideFullKeys: "Скрывать полные ключи"
+    hideFullKeys: "Скрывать полные ключи",
+    proxyInputTitle: "Список прокси",
+    proxyInputHint: "Вставьте прокси построчно. Формат: USER:PASS@IP:PORT или IP:PORT.",
+    proxyCount: "Прокси",
+    proxyFormatWarning: "Часть прокси не соответствует формату (только предупреждение)",
+    proxyLimitWarning: "Достигнут лимит, лишние прокси пропущены",
+    proxyAggregatorsTitle: "URL агрегаторов",
+    proxyAggregatorsHint:
+      "Один URL на строку. Строки с # игнорируются. Загружаются при старте и объединяются с ручным списком.",
+    proxyAggregatorsFailed: "Не удалось загрузить агрегаторы",
+    proxyAggregatorsLoading: "Загрузка агрегаторов...",
+    proxyAggregatorsAddHttp: "Добавить HTTP",
+    proxyAggregatorsAddHttps: "Добавить HTTPS",
+    proxyAggregatorsAddSocks4: "Добавить SOCKS4",
+    proxyAggregatorsAddSocks5: "Добавить SOCKS5",
+    proxyAggregatorsClear: "Очистить",
+    proxyAggregatorsCancel: "Отменить",
+    proxyListEmpty: "Список прокси пуст",
+    proxyTypesLabel: "Типы прокси",
+    proxySpeedTooltip: "Мягкий лимит; медленные ответы дадут too_slow.",
+    proxySpeedHint:
+      "Мягкий порог задержки. Если превышен — too_slow даже при успешном ответе.",
+    proxyTypeLabel: "Тип",
+    proxySpeedLabel: "Скорость прокси (мс)",
+    proxyCheckModeLabel: "Тип проверки",
+    proxyModeValidity: "Валидность",
+    proxyModeUrl: "Доступ к URL",
+    proxyTargetUrlLabel: "Целевой URL",
+    proxyHtmlCheckLabel: "Поиск текста в HTML",
+    proxyHtmlSearchLabel: "Текст для поиска в HTML",
+    searchProxy: "Поиск по прокси",
+    validProxies: "Валидные прокси",
+    maxProxies: "Макс. прокси за запуск"
   }
 };
 

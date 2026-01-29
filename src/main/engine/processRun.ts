@@ -5,9 +5,11 @@ import type {
   ProcessProgressEvent,
   ProcessSettings,
   ProcessStatus,
-  CustomServiceConfig
+  CustomServiceConfig,
+  ServiceId
 } from "../../shared/types";
 import { maskKey, sanitizeErrorMessage } from "../../shared/mask";
+import { decodeProxyKey } from "../../shared/proxy";
 import type { ServiceAdapter } from "../services/types";
 import { RateLimiter } from "./rateLimiter";
 import { randomBetween, sleep } from "./utils";
@@ -21,6 +23,7 @@ interface ProcessEvents {
 export interface ProcessRunOptions {
   id: string;
   name: string;
+  serviceId: ServiceId;
   keys: string[];
   method: CheckMethod;
   settings: ProcessSettings;
@@ -40,6 +43,7 @@ export class ProcessRun {
   private customConfig?: CustomServiceConfig;
   private rateLimiter: RateLimiter;
   private events: ProcessEvents;
+  private isProxyService: boolean;
   private status: ProcessStatus = "Running";
   private queueIndex = 0;
   private activeCount = 0;
@@ -52,6 +56,7 @@ export class ProcessRun {
   constructor(options: ProcessRunOptions) {
     this.id = options.id;
     this.name = options.name;
+    this.isProxyService = options.serviceId === "proxy";
     this.keys = options.keys;
     this.method = options.method;
     this.settings = options.settings;
@@ -59,6 +64,20 @@ export class ProcessRun {
     this.customConfig = options.customConfig;
     this.rateLimiter = options.rateLimiter;
     this.events = options.events;
+  }
+
+  private buildProxyMeta(
+    proxyType: CheckResult["proxyType"] | undefined,
+    overrides?: { checkMode?: CheckResult["checkMode"]; targetUrl?: CheckResult["targetUrl"] }
+  ) {
+    if (!this.isProxyService) {
+      return { proxyType };
+    }
+    return {
+      proxyType,
+      checkMode: overrides?.checkMode ?? this.settings.proxy?.checkMode,
+      targetUrl: overrides?.targetUrl ?? this.settings.proxy?.targetUrl
+    };
   }
 
   start() {
@@ -151,7 +170,9 @@ export class ProcessRun {
     this.abortControllers.set(keyIndex, controller);
     this.activeCount += 1;
 
-    const maskedKey = maskKey(key);
+    const proxyInfo = decodeProxyKey(key);
+    const displayKey = proxyInfo?.proxy ?? key;
+    const maskedKey = this.isProxyService ? displayKey : maskKey(displayKey);
     let result: CheckResult;
 
     try {
@@ -162,14 +183,15 @@ export class ProcessRun {
         await sleep(delayMs);
       }
 
-      result = await this.runWithRetries(key, controller.signal);
+      result = await this.runWithRetries(key, controller.signal, proxyInfo ?? undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unexpected error";
       result = {
         status: "UNKNOWN_ERROR",
         latencyMs: 0,
         errorMessage: sanitizeErrorMessage(message),
-        checkedAt: new Date().toISOString()
+        checkedAt: new Date().toISOString(),
+        ...this.buildProxyMeta(proxyInfo?.proxyType)
       };
     } finally {
       this.activeCount -= 1;
@@ -180,7 +202,7 @@ export class ProcessRun {
     this.events.onLog({
       processId: this.id,
       keyIndex,
-      keyFull: key,
+      keyFull: displayKey,
       keyMasked: maskedKey,
       method: this.method,
       result
@@ -190,13 +212,18 @@ export class ProcessRun {
     this.schedule();
   }
 
-  private async runWithRetries(key: string, signal: AbortSignal): Promise<CheckResult> {
+  private async runWithRetries(
+    key: string,
+    signal: AbortSignal,
+    proxyInfo?: { proxyType: CheckResult["proxyType"] }
+  ): Promise<CheckResult> {
     let attempt = 0;
     let lastResult: CheckResult = {
       status: "UNKNOWN_ERROR",
       latencyMs: 0,
       checkedAt: new Date().toISOString(),
-      errorMessage: "No response"
+      errorMessage: "No response",
+      ...this.buildProxyMeta(proxyInfo?.proxyType)
     };
 
     while (attempt <= this.settings.retries) {
@@ -206,7 +233,8 @@ export class ProcessRun {
           latencyMs: 0,
           checkedAt: new Date().toISOString(),
           errorCode: "cancelled",
-          errorMessage: "Cancelled by user"
+          errorMessage: "Cancelled by user",
+          ...this.buildProxyMeta(proxyInfo?.proxyType)
         };
       }
 
@@ -217,7 +245,8 @@ export class ProcessRun {
         timeoutMs: this.settings.timeoutMs,
         signal,
         customConfig: this.customConfig,
-        openAiOrgId: this.settings.openAiOrgId
+        openAiOrgId: this.settings.openAiOrgId,
+        proxySettings: this.settings.proxy
       });
 
       if (this.stopped || signal.aborted) {
@@ -226,7 +255,8 @@ export class ProcessRun {
           latencyMs: 0,
           checkedAt: new Date().toISOString(),
           errorCode: "cancelled",
-          errorMessage: "Cancelled by user"
+          errorMessage: "Cancelled by user",
+          ...this.buildProxyMeta(proxyInfo?.proxyType)
         };
       }
 
@@ -236,7 +266,11 @@ export class ProcessRun {
         latencyMs: adapterResult.latencyMs,
         errorCode: adapterResult.errorCode,
         errorMessage: adapterResult.errorMessage,
-        checkedAt: new Date().toISOString()
+        checkedAt: new Date().toISOString(),
+        ...this.buildProxyMeta(adapterResult.proxyType ?? proxyInfo?.proxyType, {
+          checkMode: adapterResult.checkMode,
+          targetUrl: adapterResult.targetUrl
+        })
       };
 
       if (!adapterResult.retryable || attempt === this.settings.retries) {

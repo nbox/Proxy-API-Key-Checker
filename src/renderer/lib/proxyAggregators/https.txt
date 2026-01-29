@@ -1,0 +1,51 @@
+# Proxifly
+https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/protocols/https/data.txt
+https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/protocols/https/data.txt
+
+# vakhov/fresh-proxy-list
+https://vakhov.github.io/fresh-proxy-list/https.txt
+
+# fyvri/fresh-proxy-list
+https://raw.githubusercontent.com/fyvri/fresh-proxy-list/archive/storage/classic/https.txt
+
+# r00tee/Proxy-List
+https://raw.githubusercontent.com/r00tee/Proxy-List/main/Https.txt
+
+# roosterkid/openproxylist
+https://raw.githubusercontent.com/roosterkid/openproxylist/main/HTTPS.txt
+https://raw.githubusercontent.com/roosterkid/openproxylist/main/HTTPS_RAW.txt
+
+# ShiftyTR/Proxy-List
+https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/https.txt
+
+# jetkai/proxy-list
+https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-https.txt
+
+# SoliSpirit/proxy-list
+https://raw.githubusercontent.com/SoliSpirit/proxy-list/main/https.txt
+
+# mmpx12/proxy-list
+https://raw.githubusercontent.com/mmpx12/proxy-list/master/https.txt
+
+# KangProxy
+https://raw.githubusercontent.com/officialputuid/KangProxy/KangProxy/https/https.txt
+
+# ProxySpace
+https://proxyspace.pro/https.txt
+
+# OpenProxyList API
+https://api.openproxylist.xyz/https.txt
+
+# Proxy-List.Download API
+https://proxy-list.download/api/v1/get?type=https
+https://www.proxy-list.download/api/v1/get?type=https
+
+# ProxyScan
+https://proxyscan.io/download?type=https
+
+# OpenProxy.Space API (обычно HTTP/HTTPS прокси)
+https://api.openproxy.space/lists/shttp
+
+# ProxyScrape (варианты; часть выдач — именно https)
+https://api.proxyscrape.com/v4/free-proxy-list/get?request=displayproxies&proxytype=https&timeout=100&country=all&ssl=all&anonymity=all
+https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http

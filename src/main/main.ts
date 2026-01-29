@@ -9,6 +9,7 @@ import type { ExportFormat, ReportPayload } from "../shared/types";
 
 let mainWindow: BrowserWindow | null = null;
 let processManager: ProcessManager | null = null;
+const proxyAggregatorControllers = new Map<string, AbortController>();
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -50,6 +51,44 @@ function requireManager() {
     throw new Error("Process manager is not ready yet");
   }
   return processManager;
+}
+
+async function fetchTextWithTimeout(
+  url: string,
+  timeoutMs: number,
+  signal?: AbortSignal
+) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const onAbort = () => controller.abort();
+  if (signal) {
+    if (signal.aborted) {
+      controller.abort();
+    } else {
+      signal.addEventListener("abort", onAbort, { once: true });
+    }
+  }
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "API Key Health Checker"
+      }
+    });
+    if (!response.ok) {
+      return { error: `HTTP ${response.status}` };
+    }
+    const text = await response.text();
+    return { text };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to fetch";
+    return { error: sanitizeErrorMessage(message) };
+  } finally {
+    clearTimeout(timeoutId);
+    if (signal) {
+      signal.removeEventListener("abort", onAbort);
+    }
+  }
 }
 
 function registerIpcHandlers() {
@@ -125,6 +164,57 @@ function registerIpcHandlers() {
   );
 
   ipcMain.handle("list-history", () => requireManager().listHistory());
+
+  ipcMain.handle(
+    "fetch-proxy-aggregators",
+    async (
+      _event,
+      payload: { urls: string[]; timeoutMs?: number; requestId?: string }
+    ) => {
+      const timeoutMs = Math.max(1000, payload.timeoutMs ?? 10000);
+      const requestId = payload.requestId ?? "";
+      const controller = new AbortController();
+      if (requestId) {
+        proxyAggregatorControllers.set(requestId, controller);
+      }
+      const results = await Promise.all(
+        (payload.urls || []).map(async (url) => {
+          if (controller.signal.aborted) {
+            return { url, error: "Cancelled" };
+          }
+          try {
+            new URL(url);
+          } catch {
+            return { url, error: "Invalid URL" };
+          }
+          const { text, error } = await fetchTextWithTimeout(
+            url,
+            timeoutMs,
+            controller.signal
+          );
+          if (controller.signal.aborted) {
+            return { url, error: "Cancelled" };
+          }
+          if (error) {
+            return { url, error };
+          }
+          return { url, content: text ?? "" };
+        })
+      );
+
+      if (requestId) {
+        proxyAggregatorControllers.delete(requestId);
+      }
+      return { results, cancelled: controller.signal.aborted };
+    }
+  );
+
+  ipcMain.handle("cancel-proxy-aggregators", (_event, payload: { requestId: string }) => {
+    const controller = proxyAggregatorControllers.get(payload.requestId);
+    if (controller) {
+      controller.abort();
+    }
+  });
 }
 
 app.whenReady().then(() => {

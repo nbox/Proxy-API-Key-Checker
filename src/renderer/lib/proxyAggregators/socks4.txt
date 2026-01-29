@@ -1,0 +1,57 @@
+# Proxifly
+https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/protocols/socks4/data.txt
+https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/protocols/socks4/data.txt
+
+# vakhov/fresh-proxy-list
+https://vakhov.github.io/fresh-proxy-list/socks4.txt
+
+# fyvri/fresh-proxy-list
+https://raw.githubusercontent.com/fyvri/fresh-proxy-list/archive/storage/classic/socks4.txt
+
+# r00tee/Proxy-List
+https://raw.githubusercontent.com/r00tee/Proxy-List/main/Socks4.txt
+
+# roosterkid/openproxylist
+https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS4.txt
+https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS4_RAW.txt
+
+# ShiftyTR/Proxy-List
+https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks4.txt
+
+# jetkai/proxy-list
+https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-socks4.txt
+
+# SoliSpirit/proxy-list
+https://raw.githubusercontent.com/SoliSpirit/proxy-list/main/socks4.txt
+
+# mmpx12/proxy-list
+https://raw.githubusercontent.com/mmpx12/proxy-list/master/socks4.txt
+
+# ProxyScraper/ProxyScraper
+https://raw.githubusercontent.com/ProxyScraper/ProxyScraper/main/socks4.txt
+
+# prxchk/proxy-list
+https://raw.githubusercontent.com/prxchk/proxy-list/main/socks4.txt
+
+# KangProxy
+https://raw.githubusercontent.com/officialputuid/KangProxy/KangProxy/socks4/socks4.txt
+
+# ProxySpace
+https://proxyspace.pro/socks4.txt
+
+# OpenProxyList API
+https://api.openproxylist.xyz/socks4.txt
+
+# ProxyScrape API
+https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks4
+https://api.proxyscrape.com/?request=displayproxies&proxytype=socks4
+
+# Proxy-List.Download API
+https://proxy-list.download/api/v1/get?type=socks4
+https://www.proxy-list.download/api/v1/get?type=socks4
+
+# ProxyScan
+https://proxyscan.io/download?type=socks4
+
+# OpenProxy.Space API
+https://api.openproxy.space/lists/socks4

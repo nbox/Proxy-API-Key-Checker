@@ -17,11 +17,37 @@ import { ServiceSettingsPanel } from "./components/ServiceSettingsPanel";
 import { useNetworkStatus } from "./hooks/useNetworkStatus";
 import { t, type Locale } from "./lib/i18n";
 import { parseKeysByExtension, parseKeysFromText } from "./lib/keys";
+import {
+  expandProxyKeys,
+  mergeProxyLists,
+  normalizeProxyLine,
+  parseAggregatorUrls,
+  parseProxyText
+} from "./lib/proxy";
 import type { ExportDialogState, ProcessStats, ProcessUI } from "./lib/processTypes";
 import { buildReportPayload } from "./lib/report";
 import { getServiceDefinition } from "./lib/services";
 
-const MAX_LOG_ITEMS = 10000;
+const MAX_LOG_ITEMS = 2000;
+
+const DEFAULT_PROXY_CONCURRENCY = Math.min(
+  64,
+  Math.max(
+    16,
+    ((typeof navigator !== "undefined" ? navigator.hardwareConcurrency : 4) || 4) * 4
+  )
+);
+
+const DEFAULT_PROXY_SETTINGS = {
+  types: ["http", "https", "socks4", "socks5"],
+  speedLimitMs: 5000,
+  checkMode: "validity",
+  targetUrl: "https://example.com/",
+  htmlCheck: false,
+  htmlCheckText: "Example Domain"
+} satisfies NonNullable<ProcessSettings["proxy"]>;
+
+const DEFAULT_PROXY_AGGREGATORS: string[] = [];
 
 const DEFAULT_SETTINGS: ProcessSettings = {
   method: "auth_only",
@@ -35,6 +61,21 @@ const DEFAULT_SETTINGS: ProcessSettings = {
   retries: 2,
   perProcessMaxRps: 3,
   openAiOrgId: ""
+};
+
+const DEFAULT_PROXY_PROCESS_SETTINGS: ProcessSettings = {
+  method: "auth_only",
+  randomDelay: {
+    minMs: 0,
+    maxMs: 0,
+    jitter: false
+  },
+  concurrency: DEFAULT_PROXY_CONCURRENCY,
+  timeoutMs: 12000,
+  retries: 0,
+  perProcessMaxRps: 200,
+  openAiOrgId: "",
+  proxy: DEFAULT_PROXY_SETTINGS
 };
 
 const DEFAULT_CUSTOM_CONFIG: CustomServiceConfig = {
@@ -143,22 +184,55 @@ export default function App() {
   });
   const [appVersion, setAppVersion] = useState("0.0.0");
   const [selectedService, setSelectedService] = useState<ServiceId>("openai");
-  const [settings, setSettings] = useState<ProcessSettings>(DEFAULT_SETTINGS);
+  const [apiSettings, setApiSettings] = useState<ProcessSettings>(DEFAULT_SETTINGS);
+  const [proxyProcessSettings, setProxyProcessSettings] = useState<ProcessSettings>(
+    DEFAULT_PROXY_PROCESS_SETTINGS
+  );
   const [customConfig, setCustomConfig] = useState<CustomServiceConfig>(DEFAULT_CUSTOM_CONFIG);
   const [successCodesInput, setSuccessCodesInput] = useState("200");
-  const [keyText, setKeyText] = useState("");
+  const [keyTexts, setKeyTexts] = useState<Record<ServiceId, string>>({
+    openai: "",
+    youtube: "",
+    gemini: "",
+    custom: "",
+    proxy: ""
+  });
   const [dedupeEnabled, setDedupeEnabled] = useState(true);
   const [encoding, setEncoding] = useState("utf-8");
-  const [importInfo, setImportInfo] = useState<string | null>(null);
-  const [importError, setImportError] = useState<string | null>(null);
+  const [importInfoByService, setImportInfoByService] = useState<
+    Record<ServiceId, string | null>
+  >({
+    openai: null,
+    youtube: null,
+    gemini: null,
+    custom: null,
+    proxy: null
+  });
+  const [importErrorByService, setImportErrorByService] = useState<
+    Record<ServiceId, string | null>
+  >({
+    openai: null,
+    youtube: null,
+    gemini: null,
+    custom: null,
+    proxy: null
+  });
+  const [proxyAggregatorsText, setProxyAggregatorsText] = useState(() =>
+    DEFAULT_PROXY_AGGREGATORS.join("\n")
+  );
+  const [proxyAggregatorErrors, setProxyAggregatorErrors] = useState<string[]>([]);
+  const [proxyAggregatorsLoading, setProxyAggregatorsLoading] = useState(false);
   const [maxKeysPerRun, setMaxKeysPerRun] = useState(200);
+  const [maxProxiesPerRun, setMaxProxiesPerRun] = useState(50000);
   const [processes, setProcesses] = useState<ProcessUI[]>([]);
   const [processLimit, setProcessLimit] = useState(50);
   const processLimitRef = useRef(processLimit);
+  const proxyAggregatorsLoadingRef = useRef(false);
+  const proxyAggregatorsRequestIdRef = useRef<string | null>(null);
   const [exportDialog, setExportDialog] = useState<ExportDialogState>({
     open: false,
     format: "csv",
-    acknowledged: false
+    acknowledged: true
   });
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(() => {
@@ -166,16 +240,70 @@ export default function App() {
   });
 
   const serviceDefinition = useMemo(() => getServiceDefinition(selectedService), [selectedService]);
-  const parsedKeys = useMemo(() => parseKeysFromText(keyText, dedupeEnabled), [keyText, dedupeEnabled]);
-  const keysOverLimit = parsedKeys.length > maxKeysPerRun;
-  const limitedKeys = keysOverLimit ? parsedKeys.slice(0, maxKeysPerRun) : parsedKeys;
+  const isProxyService = selectedService === "proxy";
+  const activeSettings = isProxyService ? proxyProcessSettings : apiSettings;
+  const setActiveSettings = isProxyService ? setProxyProcessSettings : setApiSettings;
+  const maxItemsPerRun = isProxyService ? maxProxiesPerRun : maxKeysPerRun;
+  const setMaxItemsPerRun = isProxyService ? setMaxProxiesPerRun : setMaxKeysPerRun;
+  const keyText = keyTexts[selectedService] ?? "";
+  const importInfo = importInfoByService[selectedService] ?? null;
+  const importError = importErrorByService[selectedService] ?? null;
+  const updateKeyText = (serviceId: ServiceId, value: string) => {
+    setKeyTexts((prev) => ({ ...prev, [serviceId]: value }));
+  };
+  const updateImportInfo = (serviceId: ServiceId, value: string | null) => {
+    setImportInfoByService((prev) => ({ ...prev, [serviceId]: value }));
+  };
+  const updateImportError = (serviceId: ServiceId, value: string | null) => {
+    setImportErrorByService((prev) => ({ ...prev, [serviceId]: value }));
+  };
+  const setActiveKeyText = (value: string) => updateKeyText(selectedService, value);
+  const setActiveImportError = (value: string | null) =>
+    updateImportError(selectedService, value);
+  const proxyAggregatorUrls = useMemo(
+    () => (isProxyService ? parseAggregatorUrls(proxyAggregatorsText) : []),
+    [isProxyService, proxyAggregatorsText]
+  );
+  const rawProxyEntries = useMemo(
+    () => (isProxyService ? parseKeysFromText(keyText, false) : []),
+    [isProxyService, keyText]
+  );
+  const normalizedProxyEntries = useMemo(() => {
+    if (!isProxyService) {
+      return [];
+    }
+    return rawProxyEntries
+      .map(normalizeProxyLine)
+      .filter((entry): entry is string => Boolean(entry));
+  }, [isProxyService, rawProxyEntries]);
+  const parsedKeys = useMemo(() => {
+    if (isProxyService) {
+      return mergeProxyLists(normalizedProxyEntries, []);
+    }
+    return parseKeysFromText(keyText, dedupeEnabled);
+  }, [isProxyService, keyText, dedupeEnabled, normalizedProxyEntries]);
+  const keysOverLimit = parsedKeys.length > maxItemsPerRun;
+  const limitedKeys = isProxyService
+    ? parsedKeys
+    : keysOverLimit
+      ? parsedKeys.slice(0, maxItemsPerRun)
+      : parsedKeys;
 
   const invalidFormatCount = useMemo(() => {
     if (!serviceDefinition.keyPattern) {
       return 0;
     }
+    if (isProxyService) {
+      return rawProxyEntries.filter((key) => {
+        const trimmed = key.trim();
+        if (!trimmed || trimmed.startsWith("#")) {
+          return false;
+        }
+        return !normalizeProxyLine(key);
+      }).length;
+    }
     return parsedKeys.filter((key) => !serviceDefinition.keyPattern?.test(key)).length;
-  }, [parsedKeys, serviceDefinition]);
+  }, [parsedKeys, rawProxyEntries, serviceDefinition, isProxyService]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -204,10 +332,10 @@ export default function App() {
 
   useEffect(() => {
     const allowedMethods = serviceDefinition.checkMethods;
-    if (!allowedMethods.includes(settings.method)) {
-      setSettings((prev) => ({ ...prev, method: allowedMethods[0] }));
+    if (!allowedMethods.includes(activeSettings.method)) {
+      setActiveSettings((prev) => ({ ...prev, method: allowedMethods[0] }));
     }
-  }, [serviceDefinition, settings.method]);
+  }, [serviceDefinition, activeSettings.method, setActiveSettings]);
 
   useEffect(() => {
     const offProgress = window.api.onProcessProgress((event) => {
@@ -241,7 +369,10 @@ export default function App() {
             latencyMs: event.result.latencyMs,
             errorCode: event.result.errorCode,
             errorMessage: event.result.errorMessage,
-            checkedAt: event.result.checkedAt
+            checkedAt: event.result.checkedAt,
+            proxyType: event.result.proxyType,
+            checkMode: event.result.checkMode,
+            targetUrl: event.result.targetUrl
           };
 
           const logs = [...process.logs, event].slice(-MAX_LOG_ITEMS);
@@ -278,12 +409,13 @@ export default function App() {
   }, []);
 
   async function handleImport() {
-    setImportError(null);
+    const serviceId = selectedService;
+    updateImportError(serviceId, null);
     try {
       const result = await window.api.openKeyFile({ encoding });
       if (result.error) {
-        setImportInfo(null);
-        setImportError(result.error || t(locale, "failedReadFile"));
+        updateImportInfo(serviceId, null);
+        updateImportError(serviceId, result.error || t(locale, "failedReadFile"));
         return;
       }
       if (result.canceled || !result.content || !result.filePath) {
@@ -291,21 +423,91 @@ export default function App() {
       }
       const extension = extensionFromPath(result.filePath);
       const keys = parseKeysByExtension(result.content, extension, dedupeEnabled);
-      setKeyText(keys.join("\n"));
-      setImportInfo(`${keys.length} ${t(locale, "keysCount").toLowerCase()} - ${result.filePath}`);
+      const normalizedKeys = serviceId === "proxy"
+        ? mergeProxyLists(
+            keys.map(normalizeProxyLine).filter((entry): entry is string => Boolean(entry)),
+            []
+          )
+        : keys;
+      updateKeyText(serviceId, normalizedKeys.join("\n"));
+      const countLabel = serviceId === "proxy" ? t(locale, "proxyCount") : t(locale, "keysCount");
+      updateImportInfo(
+        serviceId,
+        `${normalizedKeys.length} ${countLabel.toLowerCase()} - ${result.filePath}`
+      );
     } catch (error) {
-      setImportInfo(null);
-      setImportError(t(locale, "failedReadFile"));
+      updateImportInfo(serviceId, null);
+      updateImportError(serviceId, t(locale, "failedReadFile"));
     }
   }
 
-  function handleStart() {
-    if (!limitedKeys.length) {
+  async function handleStart() {
+    if (isProxyService && proxyAggregatorsLoadingRef.current) {
+      return;
+    }
+    if (!limitedKeys.length && (!isProxyService || proxyAggregatorUrls.length === 0)) {
       return;
     }
     if (selectedService === "custom" && !customConfig.baseUrl.trim()) {
-      setImportError(t(locale, "customBaseRequired"));
+      setActiveImportError(t(locale, "customBaseRequired"));
       return;
+    }
+
+    const baseSettings = activeSettings;
+    const proxySettings = baseSettings.proxy ?? DEFAULT_PROXY_SETTINGS;
+    const preparedProxySettings = {
+      ...DEFAULT_PROXY_SETTINGS,
+      ...proxySettings,
+      targetUrl: proxySettings.targetUrl?.trim() || DEFAULT_PROXY_SETTINGS.targetUrl,
+      htmlCheck: proxySettings.checkMode === "url" && Boolean(proxySettings.htmlCheck),
+      htmlCheckText:
+        proxySettings.htmlCheckText?.trim() || DEFAULT_PROXY_SETTINGS.htmlCheckText
+    };
+
+    let keysForProcess = limitedKeys;
+    let settingsForProcess = { ...baseSettings, proxy: undefined };
+    if (isProxyService) {
+      setProxyAggregatorErrors([]);
+      let aggregatorProxies: string[] = [];
+      if (proxyAggregatorUrls.length > 0) {
+        proxyAggregatorsLoadingRef.current = true;
+        const requestId = `agg-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        proxyAggregatorsRequestIdRef.current = requestId;
+        setProxyAggregatorsLoading(true);
+        try {
+          const response = await window.api.fetchProxyAggregators({
+            urls: proxyAggregatorUrls,
+            requestId
+          });
+          if (!response.cancelled) {
+            const errors = response.results
+              .filter((item) => item.error)
+              .map((item) => `${item.url}: ${item.error}`);
+            if (errors.length > 0) {
+              setProxyAggregatorErrors(errors);
+            }
+            aggregatorProxies = response.results.flatMap((item) =>
+              item.content ? parseProxyText(item.content) : []
+            );
+          }
+        } catch {
+          setProxyAggregatorErrors([t(locale, "proxyAggregatorsFailed")]);
+        } finally {
+          proxyAggregatorsLoadingRef.current = false;
+          setProxyAggregatorsLoading(false);
+          proxyAggregatorsRequestIdRef.current = null;
+        }
+      }
+
+      const uniqueAggregatorProxies = mergeProxyLists(aggregatorProxies, []);
+      const mergedProxies = mergeProxyLists(parsedKeys, uniqueAggregatorProxies);
+      const limitedProxies = mergedProxies.slice(0, maxItemsPerRun);
+      keysForProcess = expandProxyKeys(limitedProxies, preparedProxySettings.types);
+      settingsForProcess = { ...baseSettings, proxy: preparedProxySettings };
+      if (!keysForProcess.length) {
+        setActiveImportError(t(locale, "proxyListEmpty"));
+        return;
+      }
     }
 
     const processIndex = processes.filter((proc) => proc.serviceId === selectedService).length + 1;
@@ -313,8 +515,8 @@ export default function App() {
     const payload = {
       name,
       serviceId: selectedService,
-      keys: limitedKeys,
-      settings,
+      keys: keysForProcess,
+      settings: settingsForProcess,
       customConfig: {
         ...customConfig,
         successStatusCodes: parseSuccessCodesInput(successCodesInput)
@@ -331,22 +533,23 @@ export default function App() {
           startedAt: response.startedAt,
           status: "Running",
           processed: 0,
-          total: limitedKeys.length,
-          method: settings.method,
-          settings,
-          keys: limitedKeys,
+          total: keysForProcess.length,
+          method: settingsForProcess.method,
+          settings: settingsForProcess,
+          keys: keysForProcess,
           logs: [],
           results: [],
           stats: createStats(),
           expanded: true,
           activeTab: "logs",
           logFilter: "all",
-          search: ""
+          search: "",
+          followLogs: true
         };
         setProcesses((prev) => applyProcessLimit([newProcess, ...prev], processLimit));
       })
       .catch(() => {
-        setImportError(t(locale, "failedStart"));
+        setActiveImportError(t(locale, "failedStart"));
       });
   }
 
@@ -381,7 +584,7 @@ export default function App() {
 
   async function exportFull(process: ProcessUI) {
     await exportReport(process, exportDialog.format, true);
-    setExportDialog({ open: false, format: "csv", acknowledged: false });
+    setExportDialog({ open: false, format: "csv", acknowledged: true });
   }
 
   function copyFull(process: ProcessUI) {
@@ -404,6 +607,19 @@ export default function App() {
     setProcesses((prev) =>
       prev.map((process) => (process.id === processId ? { ...process, ...patch } : process))
     );
+  }
+
+  function removeProcess(processId: string) {
+    setProcesses((prev) => {
+      const process = prev.find((item) => item.id === processId);
+      if (!process) {
+        return prev;
+      }
+      if (isActiveProcess(process.status)) {
+        window.api.stopProcess(processId);
+      }
+      return prev.filter((item) => item.id !== processId);
+    });
   }
 
   function handleClearProcesses() {
@@ -434,7 +650,12 @@ export default function App() {
   }
 
   const startDisabled =
-    !limitedKeys.length || (selectedService === "custom" && !customConfig.baseUrl.trim());
+    (selectedService === "custom" && !customConfig.baseUrl.trim()) ||
+    (isProxyService
+      ? (proxyProcessSettings.proxy?.types.length ?? 0) === 0 ||
+        (!parsedKeys.length && proxyAggregatorUrls.length === 0) ||
+        proxyAggregatorsLoading
+      : !limitedKeys.length);
 
   return (
     <div className="app-shell min-h-screen px-6 pb-16 pt-10">
@@ -463,7 +684,7 @@ export default function App() {
           <>
             <button
               className="rounded-full border border-ink-200 px-4 py-2 text-sm"
-              onClick={() => setExportDialog({ open: false, format: "csv", acknowledged: false })}
+              onClick={() => setExportDialog({ open: false, format: "csv", acknowledged: true })}
             >
               {t(locale, "cancel")}
             </button>
@@ -484,16 +705,6 @@ export default function App() {
       >
         <div className="space-y-4">
           <p>{t(locale, "exportPlainHint")}</p>
-          <label className="flex items-center gap-2 text-sm text-ink-500">
-            <input
-              type="checkbox"
-              checked={exportDialog.acknowledged}
-              onChange={(event) =>
-                setExportDialog((prev) => ({ ...prev, acknowledged: event.target.checked }))
-              }
-            />
-            {t(locale, "exportAcknowledge")}
-          </label>
           <div className="flex items-center gap-3">
             <label className="text-xs font-semibold text-ink-500">{t(locale, "formatLabel")}</label>
             <select
@@ -561,7 +772,8 @@ export default function App() {
           locale={locale}
           appVersion={appVersion}
           keyText={keyText}
-          onKeyTextChange={setKeyText}
+          onKeyTextChange={setActiveKeyText}
+          isProxy={isProxyService}
           dedupeEnabled={dedupeEnabled}
           onDedupeChange={setDedupeEnabled}
           parsedKeysCount={parsedKeys.length}
@@ -572,21 +784,32 @@ export default function App() {
           onImport={handleImport}
           importInfo={importInfo}
           importError={importError}
+          proxyAggregatorsText={proxyAggregatorsText}
+          onProxyAggregatorsChange={setProxyAggregatorsText}
+          proxyAggregatorErrors={proxyAggregatorErrors}
+          proxyAggregatorsLoading={proxyAggregatorsLoading}
         />
         <ServiceSettingsPanel
           locale={locale}
           serviceDefinition={serviceDefinition}
           selectedService={selectedService}
-          settings={settings}
-          setSettings={setSettings}
+          settings={activeSettings}
+          setSettings={setActiveSettings}
           customConfig={customConfig}
           setCustomConfig={setCustomConfig}
           successCodesInput={successCodesInput}
           setSuccessCodesInput={setSuccessCodesInput}
-          maxKeysPerRun={maxKeysPerRun}
-          setMaxKeysPerRun={setMaxKeysPerRun}
+          maxKeysPerRun={maxItemsPerRun}
+          setMaxKeysPerRun={setMaxItemsPerRun}
           startDisabled={startDisabled}
           onStart={handleStart}
+          proxyAggregatorsLoading={isProxyService && proxyAggregatorsLoading}
+          onCancelProxyAggregators={() => {
+            const requestId = proxyAggregatorsRequestIdRef.current;
+            if (requestId) {
+              window.api.cancelProxyAggregators({ requestId });
+            }
+          }}
         />
       </section>
       <ProcessesSection
@@ -602,17 +825,18 @@ export default function App() {
         onPause={(processId) => window.api.pauseProcess(processId)}
         onResume={(processId) => window.api.resumeProcess(processId)}
         onStop={(processId) => window.api.stopProcess(processId)}
+        onRemove={removeProcess}
         onCopyFull={copyFull}
         onExportMasked={(process, format) => exportReport(process, format, false)}
-        onExportFullRequest={(processId) =>
-          setExportDialog({
-            open: true,
-            format: "csv",
-            acknowledged: false,
-            processId
-          })
-        }
-      />
+          onExportFullRequest={(processId) =>
+            setExportDialog({
+              open: true,
+              format: "csv",
+              acknowledged: true,
+              processId
+            })
+          }
+        />
     </div>
   );
 }
