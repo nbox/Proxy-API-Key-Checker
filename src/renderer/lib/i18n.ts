@@ -83,6 +83,7 @@ type CopyKey =
   | "statusCompleted"
   | "statusCancelled"
   | "statusRunning"
+  | "clearProxyList"
   | "formatLabel"
   | "totalLabel"
   | "latencyLabel"
@@ -132,6 +133,26 @@ type CopyKey =
   | "proxyTargetUrlLabel"
   | "proxyHtmlCheckLabel"
   | "proxyHtmlSearchLabel"
+  | "proxyHtmlMaxKbLabel"
+  | "proxyHtmlMaxKbHint"
+  | "proxyHtmlAddText"
+  | "proxyHtmlSearchOrHint"
+  | "proxyHeadlessLabel"
+  | "proxyHeadlessHint"
+  | "proxyPresetLight"
+  | "proxyPresetMedium"
+  | "proxyPresetHard"
+  | "proxyPresetExtreme"
+  | "proxyMoveToList"
+  | "proxyMoveToListHint"
+  | "proxyScreenshotLabel"
+  | "proxyScreenshotHint"
+  | "proxyScreenshotChooseFolder"
+  | "proxyScreenshotChoosingFolder"
+  | "proxyScreenshotFolderEmpty"
+  | "proxyScreenshotMaxFiles"
+  | "proxyScreenshotAutoDelete"
+  | "proxyScreenshotIncludeFailed"
   | "searchProxy"
   | "validProxies"
   | "maxProxies";
@@ -164,8 +185,8 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     concurrency: "Concurrency",
     concurrencyHint: "Parallel checks per process.",
     timeout: "Timeout (ms)",
-    timeoutHint: "Hard limit for the whole request (connect + response). If reached, the check is aborted.",
-    timeoutTooltip: "Hard cap; should be higher than proxy speed limit.",
+    timeoutHint: "Hard limit for connect + response. When reached, the request is aborted.",
+    timeoutTooltip: "Hard cutoff; keep it above proxy speed.",
     retries: "Retries",
     retriesHint: "Extra attempts on failure.",
     maxKeys: "Max keys per run",
@@ -228,6 +249,7 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     statusCompleted: "Completed",
     statusCancelled: "Cancelled",
     statusRunning: "Running",
+    clearProxyList: "Clear",
     formatLabel: "Format",
     totalLabel: "Total",
     latencyLabel: "Latency",
@@ -262,9 +284,9 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     proxyAggregatorsCancel: "Cancel",
     proxyListEmpty: "Proxy list is empty",
     proxyTypesLabel: "Proxy types",
-    proxySpeedTooltip: "Soft limit; slower responses are marked too_slow.",
+    proxySpeedTooltip: "Soft latency limit; if exceeded, result becomes too_slow.",
     proxySpeedHint:
-      "Soft threshold for latency. If exceeded, result is too_slow even if it finishes before timeout.",
+      "Soft threshold for total check time. Marks too_slow even if the response arrives before timeout.",
     proxyTypeLabel: "Type",
     proxySpeedLabel: "Proxy speed (ms)",
     proxyCheckModeLabel: "Check mode",
@@ -273,6 +295,26 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     proxyTargetUrlLabel: "Target URL",
     proxyHtmlCheckLabel: "Search text in HTML",
     proxyHtmlSearchLabel: "Text to find in HTML",
+    proxyHtmlMaxKbLabel: "HTML scan limit (KB)",
+    proxyHtmlMaxKbHint: "Only for non-headless checks. Stops reading after N KB.",
+    proxyHtmlAddText: "Add text",
+    proxyHtmlSearchOrHint: "Match if any text is found (OR). Stops after the first hit.",
+    proxyHeadlessLabel: "Headless browser",
+    proxyHeadlessHint: "Full page load with JS; slower and heavier.",
+    proxyPresetLight: "Light",
+    proxyPresetMedium: "Medium (recommended)",
+    proxyPresetHard: "Hard",
+    proxyPresetExtreme: "Extreme",
+    proxyMoveToList: "Move to Proxy list",
+    proxyMoveToListHint: "For re-checking in another mode.",
+    proxyScreenshotLabel: "Screenshot",
+    proxyScreenshotHint: "Save a compressed page snapshot.",
+    proxyScreenshotChooseFolder: "Choose folder",
+    proxyScreenshotChoosingFolder: "Selecting folder...",
+    proxyScreenshotFolderEmpty: "No folder selected",
+    proxyScreenshotMaxFiles: "Max files in folder",
+    proxyScreenshotAutoDelete: "Auto-delete oldest",
+    proxyScreenshotIncludeFailed: "Include failed",
     searchProxy: "Search by proxy",
     validProxies: "Valid proxies",
     maxProxies: "Max proxies per run"
@@ -304,9 +346,8 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     concurrency: "Concurrencia",
     concurrencyHint: "Verificaciones en paralelo por proceso.",
     timeout: "Tiempo de espera (ms)",
-    timeoutHint:
-      "Límite duro para toda la solicitud (conexión + respuesta). Si se alcanza, se aborta.",
-    timeoutTooltip: "Límite duro; debe ser mayor que la velocidad del proxy.",
+    timeoutHint: "Límite duro de conexión y respuesta. Al alcanzarse, se aborta.",
+    timeoutTooltip: "Corte duro; mantenlo por encima de la velocidad del proxy.",
     retries: "Reintentos",
     retriesHint: "Intentos extra si falla.",
     maxKeys: "Máx. claves por ejecución",
@@ -370,6 +411,7 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     statusCompleted: "Completado",
     statusCancelled: "Cancelado",
     statusRunning: "En curso",
+    clearProxyList: "Limpiar",
     formatLabel: "Formato",
     totalLabel: "Total",
     latencyLabel: "Latencia",
@@ -404,9 +446,9 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     proxyAggregatorsCancel: "Cancelar",
     proxyListEmpty: "La lista de proxies está vacía",
     proxyTypesLabel: "Tipos de proxy",
-    proxySpeedTooltip: "Límite suave; respuestas lentas marcan too_slow.",
+    proxySpeedTooltip: "Límite suave de latencia; si se supera, resultado too_slow.",
     proxySpeedHint:
-      "Umbral suave de latencia. Si se supera, el resultado es too_slow aunque termine antes del timeout.",
+      "Umbral suave del tiempo total. Marca too_slow incluso si llega antes del timeout.",
     proxyTypeLabel: "Tipo",
     proxySpeedLabel: "Velocidad del proxy (ms)",
     proxyCheckModeLabel: "Modo de verificación",
@@ -415,6 +457,26 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     proxyTargetUrlLabel: "URL objetivo",
     proxyHtmlCheckLabel: "Buscar texto en HTML",
     proxyHtmlSearchLabel: "Texto a buscar en HTML",
+    proxyHtmlMaxKbLabel: "Límite de HTML (KB)",
+    proxyHtmlMaxKbHint: "Solo para no headless. Detiene la lectura tras N KB.",
+    proxyHtmlAddText: "Agregar texto",
+    proxyHtmlSearchOrHint: "Es válido si se encuentra cualquiera (OR). Se detiene en la primera coincidencia.",
+    proxyHeadlessLabel: "Navegador headless",
+    proxyHeadlessHint: "Carga completa con JS; más lento y pesado.",
+    proxyPresetLight: "Ligera",
+    proxyPresetMedium: "Media (recomendada)",
+    proxyPresetHard: "Dura",
+    proxyPresetExtreme: "Extrema",
+    proxyMoveToList: "Mover a la lista de proxies",
+    proxyMoveToListHint: "Para volver a verificar en otro modo.",
+    proxyScreenshotLabel: "Captura",
+    proxyScreenshotHint: "Guarda una captura comprimida.",
+    proxyScreenshotChooseFolder: "Elegir carpeta",
+    proxyScreenshotChoosingFolder: "Seleccionando carpeta...",
+    proxyScreenshotFolderEmpty: "Ninguna carpeta seleccionada",
+    proxyScreenshotMaxFiles: "Máx. archivos en carpeta",
+    proxyScreenshotAutoDelete: "Eliminar las más antiguas",
+    proxyScreenshotIncludeFailed: "Incluir fallidas",
     searchProxy: "Buscar por proxy",
     validProxies: "Proxies válidos",
     maxProxies: "Máx. proxies por ejecución"
@@ -446,9 +508,8 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     concurrency: "Параллельность",
     concurrencyHint: "Параллельные проверки на процесс.",
     timeout: "Таймаут (мс)",
-    timeoutHint:
-      "Жёсткий лимит всего запроса (соединение + ответ). При превышении запрос прерывается.",
-    timeoutTooltip: "Жёсткий лимит; должен быть выше скорости прокси.",
+    timeoutHint: "Жёсткий лимит на подключение и ответ. По достижении запрос прерывается.",
+    timeoutTooltip: "Жёсткая отсечка; держите выше скорости прокси.",
     retries: "Повторы",
     retriesHint: "Доп. попытки при ошибке.",
     maxKeys: "Макс. ключей за запуск",
@@ -512,6 +573,7 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     statusCompleted: "Завершено",
     statusCancelled: "Отменено",
     statusRunning: "В процессе",
+    clearProxyList: "Очистить",
     formatLabel: "Формат",
     totalLabel: "Всего",
     latencyLabel: "Задержка",
@@ -546,9 +608,9 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     proxyAggregatorsCancel: "Отменить",
     proxyListEmpty: "Список прокси пуст",
     proxyTypesLabel: "Типы прокси",
-    proxySpeedTooltip: "Мягкий лимит; медленные ответы дадут too_slow.",
+    proxySpeedTooltip: "Мягкий лимит задержки; при превышении результат too_slow.",
     proxySpeedHint:
-      "Мягкий порог задержки. Если превышен — too_slow даже при успешном ответе.",
+      "Мягкий порог общего времени проверки. При превышении too_slow даже при успешном ответе.",
     proxyTypeLabel: "Тип",
     proxySpeedLabel: "Скорость прокси (мс)",
     proxyCheckModeLabel: "Тип проверки",
@@ -557,6 +619,26 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     proxyTargetUrlLabel: "Целевой URL",
     proxyHtmlCheckLabel: "Поиск текста в HTML",
     proxyHtmlSearchLabel: "Текст для поиска в HTML",
+    proxyHtmlMaxKbLabel: "Лимит HTML (КБ)",
+    proxyHtmlMaxKbHint: "Только без headless. Останавливаем чтение после N КБ.",
+    proxyHtmlAddText: "Добавить текст",
+    proxyHtmlSearchOrHint: "Совпадение по ИЛИ: если найден любой текст, проверка успешна.",
+    proxyHeadlessLabel: "Headless браузер",
+    proxyHeadlessHint: "Полная загрузка страницы с JS; медленнее и тяжелее.",
+    proxyPresetLight: "Лёгкая",
+    proxyPresetMedium: "Средняя (рекоменд.)",
+    proxyPresetHard: "Жёсткая",
+    proxyPresetExtreme: "Экстремальная",
+    proxyMoveToList: "Переместить в Proxy list",
+    proxyMoveToListHint: "Для повторной проверки в другом режиме.",
+    proxyScreenshotLabel: "Скриншот",
+    proxyScreenshotHint: "Сохранять сжатый снимок страницы.",
+    proxyScreenshotChooseFolder: "Выбрать папку",
+    proxyScreenshotChoosingFolder: "Выбор папки...",
+    proxyScreenshotFolderEmpty: "Папка не выбрана",
+    proxyScreenshotMaxFiles: "Макс. файлов в папке",
+    proxyScreenshotAutoDelete: "Удалять самые старые",
+    proxyScreenshotIncludeFailed: "Сохранять невалидные",
     searchProxy: "Поиск по прокси",
     validProxies: "Валидные прокси",
     maxProxies: "Макс. прокси за запуск"

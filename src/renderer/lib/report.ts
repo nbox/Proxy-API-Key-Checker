@@ -7,6 +7,7 @@ import type {
   ServiceId,
   CheckMethod
 } from "../../shared/types";
+import type { ProcessStats } from "./processTypes";
 
 function summarize(results: ReportResultItem[]): ReportSummary {
   const summary: ReportSummary = {
@@ -51,6 +52,45 @@ function summarize(results: ReportResultItem[]): ReportSummary {
   return summary;
 }
 
+function medianLatency(latencies: number[]) {
+  if (!latencies.length) {
+    return 0;
+  }
+  const sorted = [...latencies].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) {
+    return Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+  }
+  return sorted[mid];
+}
+
+export function buildSummaryFromStats(stats: ProcessStats, totalOverride?: number): ReportSummary {
+  const total =
+    totalOverride ??
+    stats.success +
+      stats.invalid +
+      stats.quota +
+      stats.rateLimited +
+      stats.network +
+      stats.unknown;
+  const avgLatencyMs = stats.latencyCount
+    ? Math.round(stats.latencyTotal / stats.latencyCount)
+    : 0;
+  const medianLatencyMs = medianLatency(stats.latencies);
+
+  return {
+    total,
+    success: stats.success,
+    invalid: stats.invalid,
+    quota: stats.quota,
+    rateLimited: stats.rateLimited,
+    network: stats.network,
+    unknown: stats.unknown,
+    avgLatencyMs,
+    medianLatencyMs
+  };
+}
+
 export function buildReportPayload(options: {
   appVersion: string;
   serviceId: ServiceId;
@@ -59,8 +99,9 @@ export function buildReportPayload(options: {
   startedAt: string;
   finishedAt: string;
   results: ReportResultItem[];
+  summary?: ReportSummary;
 }) {
-  const summary = summarize(options.results);
+  const summary = options.summary ?? summarize(options.results);
   const meta = {
     app: "API Key Health Checker",
     version: options.appVersion,
@@ -85,6 +126,10 @@ export function statusBuckets(results: ReportResultItem[]) {
     buckets.set(key, (buckets.get(key) ?? 0) + 1);
   }
   return Array.from(buckets.entries()).sort((a, b) => b[1] - a[1]).slice(0, 4);
+}
+
+export function statusBucketsFromCounts(counts: Record<string, number>) {
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 4);
 }
 
 export function formatStatus(status: CheckStatus) {

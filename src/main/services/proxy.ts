@@ -2,6 +2,10 @@ import http from "http";
 import https from "https";
 import net from "net";
 import tls from "tls";
+import path from "path";
+import fs from "fs/promises";
+import { BrowserWindow, session } from "electron";
+import type { Session } from "electron";
 import createHttpProxyAgent from "http-proxy-agent";
 import { sanitizeErrorMessage } from "../../shared/mask";
 import { decodeProxyKey } from "../../shared/proxy";
@@ -10,7 +14,10 @@ import type { ServiceAdapter } from "./types";
 
 const DEFAULT_TARGET_URL = "https://example.com/";
 const DEFAULT_HTML_TEXT = "Example Domain";
-const MAX_HTML_BYTES = 65536;
+const DEFAULT_HTML_MAX_KB = 64;
+const DEFAULT_HTML_BYTES = DEFAULT_HTML_MAX_KB * 1024;
+const DEFAULT_SCREENSHOT_MAX_FILES = 200;
+const SCREENSHOT_QUALITY = 70;
 const SCHEME_PREFIX = /^(https?|socks4|socks5):\/\//i;
 
 type ProxyRequestResult = {
@@ -34,6 +41,110 @@ type ProxyErrorInfo = {
   errorMessage: string;
   retryable: boolean;
 };
+
+type HeadlessWorker = {
+  id: number;
+  session: Session;
+};
+
+class HeadlessWorkerPool {
+  private workers: HeadlessWorker[] = [];
+  private idle: HeadlessWorker[] = [];
+  private queue: Array<(worker: HeadlessWorker) => void> = [];
+  private targetSize = 1;
+
+  ensureSize(size: number) {
+    this.targetSize = Math.max(1, Math.floor(size));
+    if (this.targetSize < this.workers.length) {
+      this.trimToTarget();
+    }
+    const existingIds = new Set(this.workers.map((worker) => worker.id));
+    for (let id = 0; id < this.targetSize; id += 1) {
+      if (existingIds.has(id)) {
+        continue;
+      }
+      const worker = this.createWorker(id);
+      this.workers.push(worker);
+      this.idle.push(worker);
+    }
+  }
+
+  async acquire() {
+    const worker = this.idle.shift();
+    if (worker) {
+      return worker;
+    }
+    return new Promise<HeadlessWorker>((resolve) => {
+      this.queue.push(resolve);
+    });
+  }
+
+  release(worker: HeadlessWorker) {
+    const next = this.queue.shift();
+    if (next) {
+      next(worker);
+      return;
+    }
+    if (worker.id >= this.targetSize) {
+      this.retireWorker(worker);
+      return;
+    }
+    this.idle.push(worker);
+  }
+
+  private trimToTarget() {
+    const retiredIds = new Set<number>();
+    this.idle = this.idle.filter((worker) => {
+      if (worker.id < this.targetSize) {
+        return true;
+      }
+      retiredIds.add(worker.id);
+      this.retireWorker(worker);
+      return false;
+    });
+    if (retiredIds.size > 0) {
+      this.workers = this.workers.filter((worker) => !retiredIds.has(worker.id));
+    }
+  }
+
+  private retireWorker(worker: HeadlessWorker) {
+    this.workers = this.workers.filter((item) => item.id !== worker.id);
+    void worker.session.clearCache().catch(() => undefined);
+    void worker.session.clearStorageData().catch(() => undefined);
+  }
+
+  private createWorker(index: number): HeadlessWorker {
+    const workerSession = session.fromPartition(`proxy-headless-${index}`, { cache: false });
+    return { id: index, session: workerSession };
+  }
+}
+
+const headlessPool = new HeadlessWorkerPool();
+const headlessProcessPoolSizes = new Map<string, number>();
+
+function getTotalHeadlessPoolSize() {
+  let total = 0;
+  for (const size of headlessProcessPoolSizes.values()) {
+    total += size;
+  }
+  return total;
+}
+
+export function registerHeadlessProcess(processId: string, poolSize: number) {
+  if (!processId || poolSize <= 0) {
+    return;
+  }
+  headlessProcessPoolSizes.set(processId, poolSize);
+  headlessPool.ensureSize(getTotalHeadlessPoolSize());
+}
+
+export function unregisterHeadlessProcess(processId: string) {
+  if (!processId) {
+    return;
+  }
+  headlessProcessPoolSizes.delete(processId);
+  headlessPool.ensureSize(getTotalHeadlessPoolSize());
+}
 
 function createProxyError(code: string, message: string) {
   const error = new Error(message) as Error & { code?: string };
@@ -129,7 +240,7 @@ function requestWithAgent(options: {
   const { targetUrl, agent, timeoutMs, signal } = options;
   const expectedText = options.expectedText?.trim();
   const searchText = expectedText ? expectedText.toLowerCase() : null;
-  const maxBodyBytes = options.maxBodyBytes ?? 65536;
+  const maxBodyBytes = options.maxBodyBytes ?? DEFAULT_HTML_BYTES;
   const method = options.method ?? "GET";
   const speedLimitMs = options.speedLimitMs ?? 0;
   const transport = targetUrl.protocol === "https:" ? https : http;
@@ -511,7 +622,7 @@ async function requestViaSocks(options: {
   const { proxyType, proxy, targetUrl, timeoutMs, signal } = options;
   const expectedText = options.expectedText?.trim();
   const searchText = expectedText ? expectedText.toLowerCase() : null;
-  const maxBodyBytes = options.maxBodyBytes ?? 65536;
+  const maxBodyBytes = options.maxBodyBytes ?? DEFAULT_HTML_BYTES;
   const method = options.method ?? "GET";
   const speedLimitMs = options.speedLimitMs ?? 0;
   const startedAt = Date.now();
@@ -832,8 +943,48 @@ function resolveProxyTarget(settings?: ProxySettings) {
     settings?.targetUrl?.trim().length ? settings.targetUrl.trim() : DEFAULT_TARGET_URL;
   const speedLimitMs = settings?.speedLimitMs ?? 0;
   const htmlCheck = Boolean(settings?.htmlCheck);
-  const htmlCheckText = settings?.htmlCheckText?.trim() || DEFAULT_HTML_TEXT;
-  return { checkMode, targetUrl, speedLimitMs, htmlCheck, htmlCheckText };
+  const rawHtmlCheckText = settings?.htmlCheckText?.trim() ?? "";
+  const extraHtmlTexts = settings?.htmlCheckTexts ?? [];
+  const htmlCheckText =
+    rawHtmlCheckText.length > 0 || extraHtmlTexts.length > 0
+      ? rawHtmlCheckText
+      : DEFAULT_HTML_TEXT;
+  const htmlCheckTexts = [htmlCheckText, ...extraHtmlTexts]
+    .map((text) => text.trim())
+    .filter((text) => text.length > 0);
+  const htmlCheckMaxKb =
+    settings?.htmlCheckMaxKb && settings.htmlCheckMaxKb > 0
+      ? settings.htmlCheckMaxKb
+      : DEFAULT_HTML_MAX_KB;
+  const headlessBrowser = Boolean(settings?.headlessBrowser);
+  const headlessPoolSize =
+    settings?.headlessPoolSize && settings.headlessPoolSize > 0
+      ? Math.floor(settings.headlessPoolSize)
+      : 2;
+  const screenshotEnabled = Boolean(settings?.screenshotEnabled);
+  const screenshotFolder = settings?.screenshotFolder?.trim() || "";
+  const screenshotMaxFiles =
+    settings?.screenshotMaxFiles && settings.screenshotMaxFiles > 0
+      ? settings.screenshotMaxFiles
+      : DEFAULT_SCREENSHOT_MAX_FILES;
+  const screenshotAutoDelete = settings?.screenshotAutoDelete ?? true;
+  const screenshotIncludeFailed = Boolean(settings?.screenshotIncludeFailed);
+  return {
+    checkMode,
+    targetUrl,
+    speedLimitMs,
+    htmlCheck,
+    htmlCheckText,
+    htmlCheckTexts,
+    htmlCheckMaxKb,
+    headlessBrowser,
+    headlessPoolSize,
+    screenshotEnabled,
+    screenshotFolder,
+    screenshotMaxFiles,
+    screenshotAutoDelete,
+    screenshotIncludeFailed
+  };
 }
 
 async function performProxyRequest(options: {
@@ -845,12 +996,13 @@ async function performProxyRequest(options: {
   method?: "GET" | "HEAD";
   signal?: AbortSignal;
   expectedText?: string;
+  maxBodyBytes?: number;
 }): Promise<ProxyRequestResult> {
   const { proxyType, proxy, targetUrl, timeoutMs, signal } = options;
   const speedLimitMs = options.speedLimitMs ?? 0;
   const method = options.method ?? "GET";
   const expectedText = options.expectedText;
-  const maxBodyBytes = expectedText ? MAX_HTML_BYTES : undefined;
+  const maxBodyBytes = expectedText ? options.maxBodyBytes : undefined;
   if (proxyType === "http" || proxyType === "https") {
     const proxyUrl = buildProxyUrl(proxy, proxyType);
     const agent = createHttpAgent(proxyUrl);
@@ -878,6 +1030,335 @@ async function performProxyRequest(options: {
   });
 }
 
+function buildProxyRules(proxyType: ProxyType, proxy: ParsedProxy) {
+  const hostPort = `${proxy.host}:${proxy.port}`;
+  if (proxyType === "http" || proxyType === "https") {
+    return `http=${hostPort};https=${hostPort}`;
+  }
+  return `${proxyType}://${hostPort}`;
+}
+
+function sanitizeScreenshotName(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "proxy";
+  }
+  return trimmed.replace(/[\\/:*?"<>|\s]+/g, "_");
+}
+
+async function ensureScreenshotSlot(options: {
+  folder: string;
+  fileName: string;
+  maxFiles: number;
+  autoDeleteOld: boolean;
+}) {
+  const { folder, fileName, maxFiles, autoDeleteOld } = options;
+  if (!maxFiles || maxFiles <= 0) {
+    return true;
+  }
+  let entries: { name: string; isFile: boolean }[] = [];
+  try {
+    const dirents = await fs.readdir(folder, { withFileTypes: true });
+    entries = dirents.map((entry) => ({ name: entry.name, isFile: entry.isFile() }));
+  } catch {
+    return false;
+  }
+  const files = entries.filter((entry) => entry.isFile).map((entry) => entry.name);
+  if (files.length < maxFiles) {
+    return true;
+  }
+  if (files.includes(fileName)) {
+    return true;
+  }
+  if (!autoDeleteOld) {
+    return false;
+  }
+  const stats = await Promise.all(
+    files.map(async (name) => {
+      try {
+        const stat = await fs.stat(path.join(folder, name));
+        return { name, mtimeMs: stat.mtimeMs };
+      } catch {
+        return null;
+      }
+    })
+  );
+  const sorted = stats.filter((item): item is { name: string; mtimeMs: number } => Boolean(item));
+  sorted.sort((a, b) => a.mtimeMs - b.mtimeMs);
+  const removeCount = Math.max(0, files.length - maxFiles + 1);
+  for (let i = 0; i < removeCount && i < sorted.length; i += 1) {
+    await fs.unlink(path.join(folder, sorted[i].name)).catch(() => undefined);
+  }
+  return true;
+}
+
+async function saveScreenshot(options: {
+  window: BrowserWindow;
+  folder: string;
+  fileBase: string;
+  maxFiles: number;
+  autoDeleteOld: boolean;
+}) {
+  const { window, folder, fileBase, maxFiles, autoDeleteOld } = options;
+  if (!folder) {
+    return;
+  }
+  const fileName = `${sanitizeScreenshotName(fileBase)}.jpg`;
+  const canWrite = await ensureScreenshotSlot({
+    folder,
+    fileName,
+    maxFiles,
+    autoDeleteOld
+  });
+  if (!canWrite || window.isDestroyed()) {
+    return;
+  }
+  const image = await window.webContents.capturePage();
+  const buffer = image.toJPEG(SCREENSHOT_QUALITY);
+  await fs.writeFile(path.join(folder, fileName), buffer);
+}
+
+async function requestViaHeadless(options: {
+  proxyType: ProxyType;
+  proxy: ParsedProxy;
+  targetUrl: URL;
+  timeoutMs: number;
+  speedLimitMs?: number;
+  signal?: AbortSignal;
+  expectedTexts?: string[];
+  screenshot?: {
+    folder: string;
+    maxFiles: number;
+    autoDeleteOld: boolean;
+    fileBase: string;
+    includeFailed: boolean;
+  };
+  poolSize?: number;
+}): Promise<ProxyRequestResult> {
+  if (options.signal?.aborted) {
+    return { error: createProxyError("aborted", "Request aborted"), latencyMs: 0 };
+  }
+  const requestedPoolSize =
+    options.poolSize && options.poolSize > 0 ? Math.floor(options.poolSize) : 1;
+  const activePoolSize = getTotalHeadlessPoolSize();
+  const poolSize = activePoolSize > 0 ? activePoolSize : requestedPoolSize;
+  const { poolSize: _poolSize, ...sessionOptions } = options;
+  headlessPool.ensureSize(poolSize);
+  const worker = await headlessPool.acquire();
+  try {
+    return await requestViaHeadlessWithSession({
+      ...sessionOptions,
+      proxySession: worker.session
+    });
+  } finally {
+    headlessPool.release(worker);
+  }
+}
+
+async function requestViaHeadlessWithSession(options: {
+  proxyType: ProxyType;
+  proxy: ParsedProxy;
+  targetUrl: URL;
+  timeoutMs: number;
+  speedLimitMs?: number;
+  signal?: AbortSignal;
+  expectedTexts?: string[];
+  screenshot?: {
+    folder: string;
+    maxFiles: number;
+    autoDeleteOld: boolean;
+    fileBase: string;
+    includeFailed: boolean;
+  };
+  proxySession: Session;
+}): Promise<ProxyRequestResult> {
+  const { proxySession, proxyType, proxy, targetUrl, timeoutMs, signal } = options;
+  const speedLimitMs = options.speedLimitMs ?? 0;
+  const searchTexts = (options.expectedTexts ?? [])
+    .map((text) => text.trim())
+    .filter((text) => text.length > 0)
+    .map((text) => text.toLowerCase());
+  const screenshot = options.screenshot;
+  const startedAt = Date.now();
+
+  try {
+    await proxySession.setProxy({ proxyRules: buildProxyRules(proxyType, proxy) });
+  } catch (error) {
+    return { error: error as Error, latencyMs: Date.now() - startedAt };
+  }
+
+  return new Promise((resolve) => {
+    let finished = false;
+    let statusCode: number | undefined;
+    let cleanupPromise: Promise<void> | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let speedLimitId: ReturnType<typeof setTimeout> | undefined;
+    const window = new BrowserWindow({
+      show: false,
+      webPreferences: {
+        session: proxySession,
+        backgroundThrottling: false
+      }
+    });
+
+    function finish(result: Omit<ProxyRequestResult, "latencyMs">) {
+      if (finished) {
+        return;
+      }
+      finished = true;
+      runCleanup().then(() => {
+        resolve({ ...result, latencyMs: Date.now() - startedAt });
+      });
+    }
+
+    function onAbort() {
+      if (!window.isDestroyed()) {
+        window.webContents.stop();
+      }
+      finish({ error: createProxyError("aborted", "Request aborted") });
+    }
+
+    function onLogin(
+      event: Electron.Event,
+      _details: Electron.AuthenticationResponseDetails,
+      authInfo: Electron.AuthInfo,
+      callback: (username?: string, password?: string) => void
+    ) {
+      if (!authInfo.isProxy) {
+        return;
+      }
+      event.preventDefault();
+      callback(proxy.username ?? "", proxy.password ?? "");
+    }
+
+    function onResponseStarted(details: Electron.OnResponseStartedListenerDetails) {
+      if (details.resourceType === "mainFrame") {
+        statusCode = details.statusCode;
+      }
+    }
+
+    function onRequestError(details: Electron.OnErrorOccurredListenerDetails) {
+      if (details.resourceType === "mainFrame" && !finished) {
+        finish({
+          error: createProxyError("connect_failed", details.error || "Proxy error")
+        });
+      }
+    }
+
+    function onFail(_event: Electron.Event, _code: number, description: string) {
+      finish({ error: createProxyError("connect_failed", description || "Load failed") });
+    }
+
+    async function onFinish() {
+      if (finished) {
+        return;
+      }
+      try {
+        let textFound: boolean | undefined;
+        if (searchTexts.length > 0) {
+          const script = `(() => {
+            const html = document.documentElement.outerHTML.toLowerCase();
+            const targets = ${JSON.stringify(searchTexts)};
+            for (const text of targets) {
+              if (text && html.includes(text)) {
+                return true;
+              }
+            }
+            return false;
+          })()`;
+          if (!window.isDestroyed()) {
+            textFound = await window.webContents.executeJavaScript(script, true);
+          }
+        }
+        const textMatch = searchTexts.length === 0 ? true : Boolean(textFound);
+        const isValid =
+          statusCode !== undefined && statusCode >= 200 && statusCode < 400 && textMatch;
+        if (screenshot && screenshot.folder && (isValid || screenshot.includeFailed)) {
+          try {
+            await saveScreenshot({
+              window,
+              folder: screenshot.folder,
+              fileBase: screenshot.fileBase,
+              maxFiles: screenshot.maxFiles,
+              autoDeleteOld: screenshot.autoDeleteOld
+            });
+          } catch {
+            // Ignore screenshot failures to avoid failing the check.
+          }
+        }
+        finish({ statusCode: statusCode ?? 200, textFound });
+      } catch (error) {
+        finish({ error: error as Error });
+      }
+    }
+
+    function runCleanup(): Promise<void> {
+      if (cleanupPromise) {
+        return cleanupPromise;
+      }
+      cleanupPromise = (async () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        if (speedLimitId) {
+          clearTimeout(speedLimitId);
+        }
+        if (signal) {
+          signal.removeEventListener("abort", onAbort);
+        }
+        proxySession.webRequest.onResponseStarted(null);
+        proxySession.webRequest.onErrorOccurred(null);
+        if (window && !window.isDestroyed()) {
+          window.webContents.removeListener("login", onLogin);
+          window.webContents.removeListener("did-fail-load", onFail);
+          window.webContents.removeListener("did-finish-load", onFinish);
+          window.destroy();
+        }
+        await proxySession.clearCache().catch(() => undefined);
+        await proxySession.clearStorageData().catch(() => undefined);
+      })();
+      return cleanupPromise;
+    }
+
+    timeoutId = setTimeout(() => {
+      if (!window.isDestroyed()) {
+        window.webContents.stop();
+      }
+      finish({ error: createProxyError("timeout", "Request timeout") });
+    }, timeoutMs);
+    speedLimitId =
+      speedLimitMs > 0 && speedLimitMs < timeoutMs
+        ? setTimeout(() => {
+            if (!window.isDestroyed()) {
+              window.webContents.stop();
+            }
+            finish({ error: createProxyError("too_slow", "Proxy too slow") });
+          }, speedLimitMs)
+        : undefined;
+
+    if (signal) {
+      if (signal.aborted) {
+        onAbort();
+      } else {
+        signal.addEventListener("abort", onAbort, { once: true });
+      }
+    }
+
+    proxySession.webRequest.onResponseStarted({ urls: ["*://*/*"] }, onResponseStarted);
+    proxySession.webRequest.onErrorOccurred({ urls: ["*://*/*"] }, onRequestError);
+
+    window.webContents.on("login", onLogin);
+    window.webContents.once("did-fail-load", onFail);
+    window.webContents.once("did-finish-load", onFinish);
+
+    window.webContents
+      .loadURL(targetUrl.toString(), { userAgent: "API Key Health Checker" })
+      .catch((error) => {
+        finish({ error });
+      });
+  });
+}
+
 export const proxyAdapter: ServiceAdapter = {
   id: "proxy",
   displayName: "Proxy Checker",
@@ -889,11 +1370,27 @@ export const proxyAdapter: ServiceAdapter = {
     const proxyType = decoded?.proxyType ?? proxySettings?.types?.[0] ?? "http";
     const proxyValue = decoded?.proxy ?? key;
     const parsedProxy = parseProxyAddress(proxyValue);
-    const { checkMode, targetUrl, speedLimitMs, htmlCheck, htmlCheckText } =
-      resolveProxyTarget(proxySettings);
-    const effectiveHtmlCheck = checkMode === "url" && htmlCheck && htmlCheckText.length > 0;
+    const {
+      checkMode,
+      targetUrl,
+      speedLimitMs,
+      htmlCheck,
+      htmlCheckTexts,
+      htmlCheckMaxKb,
+      headlessBrowser,
+      headlessPoolSize,
+      screenshotEnabled,
+      screenshotFolder,
+      screenshotMaxFiles,
+      screenshotAutoDelete,
+      screenshotIncludeFailed
+    } = resolveProxyTarget(proxySettings);
+    const effectiveHtmlCheck = checkMode === "url" && htmlCheck && htmlCheckTexts.length > 0;
+    const effectiveHeadless = effectiveHtmlCheck && headlessBrowser;
     const useHead = checkMode === "validity" || (checkMode === "url" && !effectiveHtmlCheck);
     const method = useHead ? "HEAD" : "GET";
+    const htmlCheckMaxBytes = Math.max(1, htmlCheckMaxKb) * 1024;
+    const primaryHtmlText = htmlCheckTexts[0] ?? "";
 
     if (!parsedProxy) {
       return {
@@ -936,16 +1433,42 @@ export const proxyAdapter: ServiceAdapter = {
       };
     }
 
-    let requestResult = await performProxyRequest({
-      proxyType,
-      proxy: parsedProxy,
-      targetUrl: parsedTarget,
-      timeoutMs,
-      speedLimitMs,
-      method,
-      signal,
-      expectedText: effectiveHtmlCheck ? htmlCheckText : undefined
-    });
+    const screenshotConfig =
+      effectiveHeadless && screenshotEnabled && screenshotFolder
+        ? {
+            folder: screenshotFolder,
+            maxFiles: screenshotMaxFiles,
+            autoDeleteOld: screenshotAutoDelete,
+            fileBase: parsedProxy.username
+              ? `${parsedProxy.username}@${parsedProxy.host}:${parsedProxy.port}`
+              : `${parsedProxy.host}:${parsedProxy.port}`,
+            includeFailed: screenshotIncludeFailed
+          }
+        : undefined;
+
+    let requestResult = effectiveHeadless
+      ? await requestViaHeadless({
+          proxyType,
+          proxy: parsedProxy,
+          targetUrl: parsedTarget,
+          timeoutMs,
+          speedLimitMs,
+          signal,
+          expectedTexts: htmlCheckTexts,
+          screenshot: screenshotConfig,
+          poolSize: headlessPoolSize
+        })
+      : await performProxyRequest({
+          proxyType,
+          proxy: parsedProxy,
+          targetUrl: parsedTarget,
+          timeoutMs,
+          speedLimitMs,
+          method,
+          signal,
+          expectedText: effectiveHtmlCheck ? primaryHtmlText : undefined,
+          maxBodyBytes: effectiveHtmlCheck ? htmlCheckMaxBytes : undefined
+        });
 
     if (
       checkMode === "url" &&
@@ -1020,7 +1543,9 @@ export const proxyAdapter: ServiceAdapter = {
     if (status === "OK" && effectiveHtmlCheck && !requestResult.textFound) {
       status = "INVALID";
       errorCode = "text_not_found";
-      errorMessage = `Text not found: ${htmlCheckText}`;
+      const summary =
+        htmlCheckTexts.length > 1 ? htmlCheckTexts.join(" | ") : primaryHtmlText;
+      errorMessage = summary ? `Text not found: ${summary}` : "Text not found";
     }
 
     if (status === "OK" && speedLimitMs > 0 && requestResult.latencyMs > speedLimitMs) {

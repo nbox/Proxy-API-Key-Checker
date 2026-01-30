@@ -121,6 +121,27 @@ function registerIpcHandlers() {
     }
   });
 
+  ipcMain.handle("select-directory", async (_event, payload: { title?: string }) => {
+    const options = {
+      title: payload.title || "Select folder",
+      properties: ["openDirectory", "createDirectory"]
+    } satisfies Electron.OpenDialogOptions;
+
+    const parentWindow = BrowserWindow.getFocusedWindow() ?? mainWindow;
+    if (parentWindow && !parentWindow.isDestroyed()) {
+      parentWindow.focus();
+    }
+    const { canceled, filePaths } = parentWindow
+      ? await dialog.showOpenDialog(parentWindow, options)
+      : await dialog.showOpenDialog(options);
+
+    if (canceled || filePaths.length === 0) {
+      return { canceled: true };
+    }
+
+    return { canceled: false, path: filePaths[0] };
+  });
+
   ipcMain.handle("start-check", (_event, payload) => {
     return requireManager().startProcess(payload);
   });

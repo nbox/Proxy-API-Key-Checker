@@ -5,6 +5,7 @@ interface AppHeaderProps {
   locale: Locale;
   theme: "light" | "dark";
   online: boolean;
+  appVersion: string;
   onLocaleChange: (locale: Locale) => void;
   onToggleTheme: () => void;
 }
@@ -13,17 +14,23 @@ export function AppHeader({
   locale,
   theme,
   online,
+  appVersion,
   onLocaleChange,
   onToggleTheme,
 }: AppHeaderProps) {
   return (
     <header className="mb-8 flex flex-wrap items-center justify-between gap-6">
       <div className="flex items-center gap-3">
-        <img
-          src={logoUrl}
-          alt=""
-          className="h-[72px] w-[72px] object-cover"
-        />
+        <div className="flex flex-col items-center gap-1">
+          <img
+            src={logoUrl}
+            alt=""
+            className="h-[72px] w-[72px] object-cover"
+          />
+          <span className="text-[10px] font-semibold text-ink-400">
+            v{appVersion}
+          </span>
+        </div>
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-3xl font-semibold text-ink-900">

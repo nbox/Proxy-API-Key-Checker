@@ -56,6 +56,20 @@ xattr -dr com.apple.quarantine "/Applications/API Key Health Checker.app"
 - Exportar informes a CSV/JSON (enmascarado o completo)
 - Idiomas de la UI: Inglés (por defecto), Ruso, Español
 
+## Proxy Checker
+
+- Tipos: HTTP, HTTPS, SOCKS4, SOCKS5; el esquema en la línea (`http://`, `https://`, `socks4://`, `socks5://`) fija el tipo.
+- Fuentes: lista manual, importación de archivo y URLs de agregadores (una por línea; se permiten comentarios con `#`).
+- Formatos: `ip:port` o `user:pass@ip:port`; normalización y deduplicación.
+- Modos: validez o acceso a URL con URL objetivo configurable.
+- Búsqueda HTML: uno o varios textos (OR). Sin headless lee solo los primeros N KB.
+- Navegador headless: carga completa con JS; capturas opcionales (carpeta, máx. archivos, autoeliminar, incluir fallidas).
+- Headless y capturas están disponibles solo en modo URL con búsqueda HTML activada.
+- Controles: el límite de velocidad es un umbral suave; el timeout es un corte duro por solicitud. Además reintentos, concurrencia, RPS máx, retraso aleatorio + jitter, máx. proxies por ejecución.
+- Resultados: cada proxy se comprueba por cada tipo seleccionado; logs/exportes incluyen tipo, modo y URL; resumen con listas por tipo y copiar/mover a la lista.
+- Resumen: separación por tipo y botón "Mover a la lista de proxies" para filtrar rápido y luego revalidar en modo más estricto (primero validez, luego URL objetivo).
+- Agregadores preinstalados en `src/renderer/lib/proxyAggregators` (son ejemplos; algunos pueden estar caídos o bloqueados por región).
+
 ## Seguridad y privacidad
 
 - Las claves se envían solo al endpoint API seleccionado

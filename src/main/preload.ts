@@ -4,6 +4,8 @@ import type { ExportFormat, ReportPayload } from "../shared/types";
 contextBridge.exposeInMainWorld("api", {
   getAppVersion: () => ipcRenderer.invoke("get-app-version"),
   openKeyFile: (payload: { encoding: string }) => ipcRenderer.invoke("open-key-file", payload),
+  selectDirectory: (payload: { title?: string }) =>
+    ipcRenderer.invoke("select-directory", payload),
   fetchProxyAggregators: (payload: {
     urls: string[];
     timeoutMs?: number;

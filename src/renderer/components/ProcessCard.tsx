@@ -1,6 +1,6 @@
 import type { CheckStatus, ExportFormat, ProcessStatus, ProxyType } from "../../shared/types";
 import { t, type Locale } from "../lib/i18n";
-import { statusBuckets } from "../lib/report";
+import { statusBucketsFromCounts } from "../lib/report";
 import { STATUS_LABELS, STATUS_RECOMMENDATIONS, STATUS_TONES, isSuccess, isWarning } from "../lib/status";
 import type { ProcessUI } from "../lib/processTypes";
 import { VirtualLogList } from "./VirtualLogList";
@@ -16,16 +16,16 @@ interface ProcessCardProps {
   onStop: () => void;
   onRemove: () => void;
   onCopyFull: () => void;
+  onMoveValidProxies: (proxies: string[]) => void;
   onExportMasked: (format: ExportFormat) => void;
   onExportFullRequest: () => void;
 }
 
-function averageLatency(latencies: number[]) {
-  if (!latencies.length) {
+function averageLatency(total: number, count: number) {
+  if (!count) {
     return 0;
   }
-  const sum = latencies.reduce((acc, val) => acc + val, 0);
-  return Math.round(sum / latencies.length);
+  return Math.round(total / count);
 }
 
 function medianLatency(latencies: number[]) {
@@ -92,6 +92,7 @@ export function ProcessCard({
   onStop,
   onRemove,
   onCopyFull,
+  onMoveValidProxies,
   onExportMasked,
   onExportFullRequest
 }: ProcessCardProps) {
@@ -105,9 +106,9 @@ export function ProcessCard({
     ? Math.min(100, (successCount / processedCount) * 100)
     : 0;
   const failurePortion = processedCount ? Math.max(0, 100 - successPortion) : 0;
-  const average = averageLatency(process.stats.latencies);
+  const average = averageLatency(process.stats.latencyTotal, process.stats.latencyCount);
   const median = medianLatency(process.stats.latencies);
-  const reasons = statusBuckets(process.results);
+  const reasons = statusBucketsFromCounts(process.stats.reasonCounts);
   const isProxyService = process.serviceId === "proxy";
   const validLabel = isProxyService ? t(locale, "validProxies") : t(locale, "validKeys");
   const successHeaderLabel = t(locale, "successLabel");
@@ -124,8 +125,17 @@ export function ProcessCard({
     socks4: [],
     socks5: []
   };
+  const validProxyList: string[] = [];
   if (isProxyService) {
+    const seen = new Set<string>();
     for (const item of process.results) {
+      if (item.status === "OK") {
+        const value = (item.keyFull ?? item.keyMasked)?.trim();
+        if (value && !seen.has(value)) {
+          seen.add(value);
+          validProxyList.push(value);
+        }
+      }
       if (item.status !== "OK" || !item.proxyType) {
         continue;
       }
@@ -142,6 +152,13 @@ export function ProcessCard({
       return;
     }
     navigator.clipboard.writeText(payload).catch(() => undefined);
+  };
+
+  const moveValidProxies = () => {
+    if (!isProxyService || validProxyList.length === 0) {
+      return;
+    }
+    onMoveValidProxies(validProxyList);
   };
 
   return (
@@ -420,7 +437,29 @@ export function ProcessCard({
                 </div>
               </div>
               <div className="rounded-2xl border border-white/60 bg-white/70 p-4">
-                <div className="text-xs text-ink-400">{validLabel}</div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-xs text-ink-400">{validLabel}</div>
+                  {isProxyService ? (
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="rounded-full border border-ink-200 bg-white px-3 py-1 text-[11px] text-ink-500"
+                        onClick={moveValidProxies}
+                        disabled={validProxyList.length === 0}
+                      >
+                        {t(locale, "proxyMoveToList")}
+                      </button>
+                      <span
+                        className="group relative inline-flex h-4 w-4 items-center justify-center rounded-full border border-ink-300 text-[10px] font-semibold text-ink-400"
+                        aria-label={t(locale, "proxyMoveToListHint")}
+                      >
+                        ?
+                        <span className="pointer-events-none absolute right-0 top-full z-20 mt-2 w-48 rounded-lg bg-ink-900 px-2 py-1 text-[10px] text-white opacity-0 shadow-lg transition group-hover:opacity-100">
+                          {t(locale, "proxyMoveToListHint")}
+                        </span>
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
                 {isProxyService ? (
                   <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                     {(["http", "https", "socks4", "socks5"] as ProxyType[]).map((type) => (

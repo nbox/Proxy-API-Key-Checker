@@ -20,6 +20,7 @@ interface ProcessesSectionProps {
   onStop: (processId: string) => void;
   onRemove: (processId: string) => void;
   onCopyFull: (process: ProcessUI) => void;
+  onMoveValidProxies: (proxies: string[]) => void;
   onExportMasked: (process: ProcessUI, format: ExportFormat) => void;
   onExportFullRequest: (processId: string) => void;
 }
@@ -39,9 +40,11 @@ export function ProcessesSection({
   onStop,
   onRemove,
   onCopyFull,
+  onMoveValidProxies,
   onExportMasked,
   onExportFullRequest
 }: ProcessesSectionProps) {
+  const showHideKeysToggle = processes.some((process) => process.serviceId !== "proxy");
   return (
     <section className="mt-10">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -61,14 +64,16 @@ export function ProcessesSection({
               }
             />
           </label>
-          <label className="flex items-center gap-2 text-xs font-semibold text-ink-500">
-            <input
-              type="checkbox"
-              checked={hideFullKeys}
-              onChange={(event) => setHideFullKeys(event.target.checked)}
-            />
-            {t(locale, "hideFullKeys")}
-          </label>
+          {showHideKeysToggle ? (
+            <label className="flex items-center gap-2 text-xs font-semibold text-ink-500">
+              <input
+                type="checkbox"
+                checked={hideFullKeys}
+                onChange={(event) => setHideFullKeys(event.target.checked)}
+              />
+              {t(locale, "hideFullKeys")}
+            </label>
+          ) : null}
           <button
             className="rounded-full border border-ink-200 bg-white/80 px-3 py-1 text-xs font-semibold text-ink-600 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={processes.length === 0}
@@ -98,6 +103,7 @@ export function ProcessesSection({
             onStop={() => onStop(process.id)}
             onRemove={() => onRemove(process.id)}
             onCopyFull={() => onCopyFull(process)}
+            onMoveValidProxies={onMoveValidProxies}
             onExportMasked={(format) => onExportMasked(process, format)}
             onExportFullRequest={() => onExportFullRequest(process.id)}
           />

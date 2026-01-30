@@ -13,6 +13,15 @@ export interface ProxySettings {
   targetUrl: string;
   htmlCheck?: boolean;
   htmlCheckText?: string;
+  htmlCheckTexts?: string[];
+  htmlCheckMaxKb?: number;
+  headlessBrowser?: boolean;
+  headlessPoolSize?: number;
+  screenshotEnabled?: boolean;
+  screenshotFolder?: string;
+  screenshotMaxFiles?: number;
+  screenshotAutoDelete?: boolean;
+  screenshotIncludeFailed?: boolean;
 }
 
 export type CheckStatus =

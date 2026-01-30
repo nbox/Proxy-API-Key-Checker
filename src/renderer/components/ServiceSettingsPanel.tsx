@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type {
   CheckMethod,
@@ -45,6 +46,7 @@ export function ServiceSettingsPanel({
   proxyAggregatorsLoading,
   onCancelProxyAggregators
 }: ServiceSettingsPanelProps) {
+  const [selectingScreenshotFolder, setSelectingScreenshotFolder] = useState(false);
   const isProxyService = selectedService === "proxy";
   const methodHint =
     settings.method === "quota"
@@ -65,11 +67,19 @@ export function ServiceSettingsPanel({
 
   const proxySettings = settings.proxy ?? {
     types: ["http", "https", "socks4", "socks5"],
-    speedLimitMs: 5000,
+    speedLimitMs: 2500,
     checkMode: "validity",
     targetUrl: "https://example.com/",
     htmlCheck: false,
-    htmlCheckText: "Example Domain"
+    htmlCheckText: "Example Domain",
+    htmlCheckTexts: [],
+    htmlCheckMaxKb: 64,
+    headlessBrowser: false,
+    screenshotEnabled: false,
+    screenshotFolder: "",
+    screenshotMaxFiles: 200,
+    screenshotAutoDelete: true,
+    screenshotIncludeFailed: false
   };
 
   function toggleProxyType(type: ProxyType) {
@@ -89,9 +99,109 @@ export function ServiceSettingsPanel({
     });
   }
 
+  function applyProxyPreset(preset: "light" | "medium" | "hard" | "extreme") {
+    setSettings((prev) => {
+      const current = prev.proxy ?? proxySettings;
+      if (preset === "light") {
+        return {
+          ...prev,
+          concurrency: 80,
+          perProcessMaxRps: 100,
+          proxy: {
+            ...current,
+            checkMode: "validity",
+            htmlCheck: false,
+            headlessBrowser: false,
+            htmlCheckTexts: []
+          }
+        };
+      }
+      if (preset === "medium") {
+        return {
+          ...prev,
+          concurrency: 48,
+          perProcessMaxRps: 90,
+          proxy: {
+            ...current,
+            checkMode: "url",
+            targetUrl: "https://example.com/",
+            htmlCheck: true,
+            htmlCheckText: "Example Domain",
+            headlessBrowser: false,
+            htmlCheckTexts: []
+          }
+        };
+      }
+      if (preset === "hard") {
+        return {
+          ...prev,
+          concurrency: 40,
+          perProcessMaxRps: 70,
+          proxy: {
+            ...current,
+            checkMode: "url",
+            targetUrl: "https://www.google.com/",
+            htmlCheck: true,
+            htmlCheckText: "<title>Google</title>",
+            headlessBrowser: false,
+            htmlCheckTexts: []
+          }
+        };
+      }
+      return {
+        ...prev,
+        concurrency: 8,
+        perProcessMaxRps: 8,
+        proxy: {
+          ...current,
+          checkMode: "url",
+          targetUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          htmlCheck: true,
+          htmlCheckText: "<title>Rick Astley",
+          headlessBrowser: true,
+          htmlCheckTexts: []
+        }
+      };
+    });
+  }
+
   return (
     <div className="glass-card rounded-3xl p-6">
-      <h2 className="text-lg font-semibold text-ink-800">{t(locale, "serviceSettings")}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-ink-800">{t(locale, "serviceSettings")}</h2>
+        {isProxyService ? (
+          <div className="flex flex-wrap gap-2 text-xs">
+            <button
+              className="rounded-full border border-ink-200 bg-white/70 px-3 py-1 font-semibold text-ink-600"
+              type="button"
+              onClick={() => applyProxyPreset("light")}
+            >
+              {t(locale, "proxyPresetLight")}
+            </button>
+            <button
+              className="rounded-full border border-ink-200 bg-white/70 px-3 py-1 font-semibold text-ink-600"
+              type="button"
+              onClick={() => applyProxyPreset("medium")}
+            >
+              {t(locale, "proxyPresetMedium")}
+            </button>
+            <button
+              className="rounded-full border border-ink-200 bg-white/70 px-3 py-1 font-semibold text-ink-600"
+              type="button"
+              onClick={() => applyProxyPreset("hard")}
+            >
+              {t(locale, "proxyPresetHard")}
+            </button>
+            <button
+              className="rounded-full border border-ink-200 bg-white/70 px-3 py-1 font-semibold text-ink-600"
+              type="button"
+              onClick={() => applyProxyPreset("extreme")}
+            >
+              {t(locale, "proxyPresetExtreme")}
+            </button>
+          </div>
+        ) : null}
+      </div>
       <div className="mt-4 grid gap-4">
         {!isProxyService ? (
           <label className="text-xs font-semibold text-ink-500">
@@ -213,7 +323,13 @@ export function ServiceSettingsPanel({
                         ...prev,
                         proxy: {
                           ...proxySettings,
-                          htmlCheck: event.target.checked
+                          htmlCheck: event.target.checked,
+                          headlessBrowser: event.target.checked
+                            ? proxySettings.headlessBrowser
+                            : false,
+                          screenshotEnabled: event.target.checked
+                            ? proxySettings.screenshotEnabled
+                            : false
                         }
                       }))
                     }
@@ -223,22 +339,278 @@ export function ServiceSettingsPanel({
                   </span>
                 </label>
                 {proxySettings.htmlCheck ? (
-                  <label className="mt-3 block text-xs font-semibold text-ink-500">
-                    {t(locale, "proxyHtmlSearchLabel")}
-                    <input
-                      className="mt-2 w-full rounded-2xl border border-white/60 bg-white/70 px-3 py-2 text-sm"
-                      value={proxySettings.htmlCheckText ?? ""}
-                      onChange={(event) =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          proxy: {
-                            ...proxySettings,
-                            htmlCheckText: event.target.value
+                  <>
+                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <label className="text-xs font-semibold text-ink-500">
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="inline-flex items-center gap-2">
+                            <span>{t(locale, "proxyHtmlSearchLabel")}</span>
+                            {proxySettings.headlessBrowser ? (
+                              <span
+                                className="group relative inline-flex h-4 w-4 items-center justify-center rounded-full border border-ink-300 text-[10px] font-semibold text-ink-400"
+                                aria-label={t(locale, "proxyHtmlSearchOrHint")}
+                              >
+                                ?
+                                <span className="pointer-events-none absolute right-0 top-full z-20 mt-2 w-52 rounded-lg bg-ink-900 px-2 py-1 text-[10px] text-white opacity-0 shadow-lg transition group-hover:opacity-100">
+                                  {t(locale, "proxyHtmlSearchOrHint")}
+                                </span>
+                              </span>
+                            ) : null}
+                          </span>
+                          {proxySettings.headlessBrowser ? (
+                            <button
+                              className="rounded-full border border-ink-200 bg-white px-2 py-0.5 text-[11px] text-ink-500"
+                              type="button"
+                              title={t(locale, "proxyHtmlAddText")}
+                              aria-label={t(locale, "proxyHtmlAddText")}
+                              onClick={() =>
+                                setSettings((prev) => {
+                                  const current = prev.proxy ?? proxySettings;
+                                  const extras = current.htmlCheckTexts ?? [];
+                                  if (extras.length >= 10) {
+                                    return prev;
+                                  }
+                                  return {
+                                    ...prev,
+                                    proxy: {
+                                      ...current,
+                                      htmlCheckTexts: [...extras, ""]
+                                    }
+                                  };
+                                })
+                              }
+                            >
+                              +
+                            </button>
+                          ) : null}
+                        </span>
+                        <input
+                          className="mt-2 w-full rounded-2xl border border-white/60 bg-white/70 px-3 py-2 text-sm"
+                          value={proxySettings.htmlCheckText ?? ""}
+                          onChange={(event) =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              proxy: {
+                                ...proxySettings,
+                                htmlCheckText: event.target.value
+                              }
+                            }))
                           }
-                        }))
-                      }
-                    />
-                  </label>
+                        />
+                      </label>
+                      {!proxySettings.headlessBrowser ? (
+                        <label className="text-xs font-semibold text-ink-500">
+                          {t(locale, "proxyHtmlMaxKbLabel")}
+                          <input
+                            className="mt-2 w-full rounded-2xl border border-white/60 bg-white/70 px-3 py-2 text-sm"
+                            type="number"
+                            min={1}
+                            value={proxySettings.htmlCheckMaxKb ?? 64}
+                            onChange={(event) =>
+                              setSettings((prev) => ({
+                                ...prev,
+                                proxy: {
+                                  ...proxySettings,
+                                  htmlCheckMaxKb: sanitizeNumber(
+                                    event.target.value,
+                                    proxySettings.htmlCheckMaxKb ?? 64,
+                                    1
+                                  )
+                                }
+                              }))
+                            }
+                          />
+                          <span className="mt-1 block text-xs font-normal text-ink-400">
+                            {t(locale, "proxyHtmlMaxKbHint")}
+                          </span>
+                        </label>
+                      ) : null}
+                    </div>
+                    {proxySettings.headlessBrowser && (proxySettings.htmlCheckTexts ?? []).length > 0 ? (
+                      <div className="mt-3 grid gap-3">
+                        {(proxySettings.htmlCheckTexts ?? []).map((value, index) => (
+                          <label key={`html-check-${index}`} className="text-xs font-semibold text-ink-500">
+                            <span className="flex items-center gap-2">
+                              <span>{t(locale, "proxyHtmlSearchLabel")}</span>
+                              <span className="text-[10px] font-normal text-ink-400">
+                                #{index + 2}
+                              </span>
+                            </span>
+                            <input
+                              className="mt-2 w-full rounded-2xl border border-white/60 bg-white/70 px-3 py-2 text-sm"
+                              value={value}
+                              onChange={(event) =>
+                                setSettings((prev) => {
+                                  const current = prev.proxy ?? proxySettings;
+                                  const next = [...(current.htmlCheckTexts ?? [])];
+                                  next[index] = event.target.value;
+                                  return {
+                                    ...prev,
+                                    proxy: {
+                                      ...current,
+                                      htmlCheckTexts: next
+                                    }
+                                  };
+                                })
+                              }
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    ) : null}
+                    <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-ink-500">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(proxySettings.headlessBrowser)}
+                          onChange={(event) =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              proxy: {
+                                ...proxySettings,
+                                headlessBrowser: event.target.checked,
+                                screenshotEnabled: event.target.checked
+                                  ? proxySettings.screenshotEnabled
+                                  : false
+                              }
+                            }))
+                          }
+                        />
+                        <span className="font-semibold text-ink-500">
+                          {t(locale, "proxyHeadlessLabel")}
+                        </span>
+                        <span className="text-xs font-normal text-ink-400">
+                          {t(locale, "proxyHeadlessHint")}
+                        </span>
+                      </label>
+                      {proxySettings.headlessBrowser ? (
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(proxySettings.screenshotEnabled)}
+                            onChange={(event) =>
+                              setSettings((prev) => ({
+                                ...prev,
+                                proxy: {
+                                  ...proxySettings,
+                                  screenshotEnabled: event.target.checked
+                                }
+                              }))
+                            }
+                          />
+                          <span className="font-semibold text-ink-500">
+                            {t(locale, "proxyScreenshotLabel")}
+                          </span>
+                          <span className="text-xs font-normal text-ink-400">
+                            {t(locale, "proxyScreenshotHint")}
+                          </span>
+                        </label>
+                      ) : null}
+                    </div>
+                    {proxySettings.headlessBrowser && proxySettings.screenshotEnabled ? (
+                      <div className="mt-3 grid gap-3">
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-ink-500">
+                          <button
+                            className={`rounded-full border border-ink-200 bg-white px-3 py-1 text-[11px] text-ink-500 ${
+                              selectingScreenshotFolder ? "cursor-wait opacity-60" : ""
+                            }`}
+                            type="button"
+                            disabled={selectingScreenshotFolder}
+                            onClick={() => {
+                              if (selectingScreenshotFolder) {
+                                return;
+                              }
+                              setSelectingScreenshotFolder(true);
+                              void (async () => {
+                                try {
+                                  await new Promise((resolve) => setTimeout(resolve, 0));
+                                  const result = await window.api.selectDirectory({
+                                    title: t(locale, "proxyScreenshotChooseFolder")
+                                  });
+                                  if (!result.canceled && result.path) {
+                                    setSettings((prev) => ({
+                                      ...prev,
+                                      proxy: {
+                                        ...proxySettings,
+                                        screenshotFolder: result.path
+                                      }
+                                    }));
+                                  }
+                                } finally {
+                                  setSelectingScreenshotFolder(false);
+                                }
+                              })();
+                            }}
+                          >
+                            {selectingScreenshotFolder
+                              ? t(locale, "proxyScreenshotChoosingFolder")
+                              : t(locale, "proxyScreenshotChooseFolder")}
+                          </button>
+                          <span className="text-xs text-ink-400">
+                            {proxySettings.screenshotFolder
+                              ? proxySettings.screenshotFolder
+                              : t(locale, "proxyScreenshotFolderEmpty")}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <label className="text-xs font-semibold text-ink-500">
+                            {t(locale, "proxyScreenshotMaxFiles")}
+                            <input
+                              className="mt-2 w-full rounded-2xl border border-white/60 bg-white/70 px-3 py-2 text-sm"
+                              type="number"
+                              min={1}
+                              value={proxySettings.screenshotMaxFiles ?? 200}
+                              onChange={(event) =>
+                                setSettings((prev) => ({
+                                  ...prev,
+                                  proxy: {
+                                    ...proxySettings,
+                                    screenshotMaxFiles: sanitizeNumber(
+                                      event.target.value,
+                                      proxySettings.screenshotMaxFiles ?? 200,
+                                      1
+                                    )
+                                  }
+                                }))
+                              }
+                            />
+                          </label>
+                          <label className="flex items-center gap-2 text-xs text-ink-500">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(proxySettings.screenshotAutoDelete)}
+                              onChange={(event) =>
+                                setSettings((prev) => ({
+                                  ...prev,
+                                  proxy: {
+                                    ...proxySettings,
+                                    screenshotAutoDelete: event.target.checked
+                                  }
+                                }))
+                              }
+                            />
+                            {t(locale, "proxyScreenshotAutoDelete")}
+                          </label>
+                          <label className="flex items-center gap-2 text-xs text-ink-500">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(proxySettings.screenshotIncludeFailed)}
+                              onChange={(event) =>
+                                setSettings((prev) => ({
+                                  ...prev,
+                                  proxy: {
+                                    ...proxySettings,
+                                    screenshotIncludeFailed: event.target.checked
+                                  }
+                                }))
+                              }
+                            />
+                            {t(locale, "proxyScreenshotIncludeFailed")}
+                          </label>
+                        </div>
+                      </div>
+                    ) : null}
+                  </>
                 ) : null}
               </>
             ) : null}

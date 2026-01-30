@@ -16,6 +16,9 @@ export interface ProcessStats {
   network: number;
   unknown: number;
   latencies: number[];
+  latencyCount: number;
+  latencyTotal: number;
+  reasonCounts: Record<string, number>;
 }
 
 export interface ProcessUI {

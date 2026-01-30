@@ -7,7 +7,6 @@ import socks5Aggregators from "../lib/proxyAggregators/socks5.txt?raw";
 
 interface KeysInputPanelProps {
   locale: Locale;
-  appVersion: string;
   keyText: string;
   onKeyTextChange: (value: string) => void;
   isProxy: boolean;
@@ -19,6 +18,7 @@ interface KeysInputPanelProps {
   encoding: string;
   onEncodingChange: (encoding: string) => void;
   onImport: () => void;
+  onClear?: () => void;
   importInfo: string | null;
   importError: string | null;
   proxyAggregatorsText?: string;
@@ -29,7 +29,6 @@ interface KeysInputPanelProps {
 
 export function KeysInputPanel({
   locale,
-  appVersion,
   keyText,
   onKeyTextChange,
   isProxy,
@@ -41,6 +40,7 @@ export function KeysInputPanel({
   encoding,
   onEncodingChange,
   onImport,
+  onClear,
   importInfo,
   importError,
   proxyAggregatorsText,
@@ -80,11 +80,21 @@ export function KeysInputPanel({
   return (
     <div className="glass-card rounded-3xl p-6">
       <div className="flex items-center justify-between">
-        <div>
+        <div className="w-full">
           <h2 className="text-lg font-semibold text-ink-800">{inputTitle}</h2>
-          <p className="text-sm text-ink-400">{inputHint}</p>
+          <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-ink-400">{inputHint}</p>
+            {isProxy ? (
+              <button
+                className="ml-auto rounded-full border border-ink-200 bg-white/80 px-3 py-1 text-xs font-semibold text-ink-600 disabled:opacity-60"
+                onClick={() => (onClear ? onClear() : onKeyTextChange(""))}
+                disabled={keyText.trim().length === 0}
+              >
+                {t(locale, "clearProxyList")}
+              </button>
+            ) : null}
+          </div>
         </div>
-        <div className="text-xs text-ink-400">v{appVersion}</div>
       </div>
       <textarea
         className="mt-4 h-48 w-full rounded-2xl border border-white/60 bg-white/70 p-4 text-sm text-ink-700 shadow-inner focus:outline-none"

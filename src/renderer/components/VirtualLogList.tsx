@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { LogEvent } from "../../shared/types";
 import { STATUS_LABELS, STATUS_TONES } from "../lib/status";
 
@@ -20,21 +20,23 @@ export function VirtualLogList({
   const [scrollTop, setScrollTop] = useState(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const scrollTopRef = useRef(0);
+  const prevItemsRef = useRef<LogEvent[]>(items);
   const totalHeight = items.length * rowHeight;
   const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - 8);
   const visibleCount = Math.ceil(height / rowHeight) + 16;
   const endIndex = Math.min(items.length, startIndex + visibleCount);
-  const lastItemKey = items.length
-    ? `${items[items.length - 1].processId}-${items[items.length - 1].keyIndex}-${items[items.length - 1].result.checkedAt}`
-    : "";
+  const itemKey = (item: LogEvent) =>
+    `${item.processId}-${item.keyIndex}-${item.result.checkedAt}`;
 
   const visibleItems = useMemo(
     () => items.slice(startIndex, endIndex),
     [items, startIndex, endIndex]
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = containerRef.current;
+    const prevItems = prevItemsRef.current;
+    prevItemsRef.current = items;
     if (!node) {
       return;
     }
@@ -45,13 +47,37 @@ export function VirtualLogList({
       return;
     }
     const maxScrollTop = Math.max(0, node.scrollHeight - node.clientHeight);
+    if (prevItems.length > 0 && items.length > 0) {
+      const prevIndex = Math.min(
+        prevItems.length - 1,
+        Math.max(0, Math.floor(scrollTopRef.current / rowHeight))
+      );
+      const prevItem = prevItems[prevIndex];
+      if (prevItem) {
+        const anchorKey = itemKey(prevItem);
+        const nextIndex = items.findIndex((item) => itemKey(item) === anchorKey);
+        if (nextIndex >= 0) {
+          const offset = scrollTopRef.current - prevIndex * rowHeight;
+          const nextScrollTop = Math.min(
+            maxScrollTop,
+            Math.max(0, nextIndex * rowHeight + offset)
+          );
+          if (Math.abs(node.scrollTop - nextScrollTop) > 1) {
+            node.scrollTop = nextScrollTop;
+            scrollTopRef.current = nextScrollTop;
+            setScrollTop(nextScrollTop);
+          }
+          return;
+        }
+      }
+    }
     const nextScrollTop = Math.min(scrollTopRef.current, maxScrollTop);
     if (node.scrollTop !== nextScrollTop) {
       node.scrollTop = nextScrollTop;
       scrollTopRef.current = nextScrollTop;
       setScrollTop(nextScrollTop);
     }
-  }, [follow, totalHeight, lastItemKey]);
+  }, [follow, items, rowHeight]);
 
   return (
     <div
@@ -69,7 +95,7 @@ export function VirtualLogList({
           const top = (startIndex + index) * rowHeight;
           return (
             <div
-              key={`${item.processId}-${item.keyIndex}-${item.result.checkedAt}`}
+              key={itemKey(item)}
               className="flex min-w-max items-center gap-3 px-3"
               style={{
                 position: "absolute",

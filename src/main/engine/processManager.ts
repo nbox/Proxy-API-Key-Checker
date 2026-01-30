@@ -10,6 +10,9 @@ import type {
 import { ProcessRun } from "./processRun";
 import { RateLimiter } from "./rateLimiter";
 import { HistoryStore } from "../history";
+import { registerHeadlessProcess, unregisterHeadlessProcess } from "../services/proxy";
+
+const MAX_LATENCY_SAMPLES = 2000;
 
 export interface StartProcessPayload {
   name: string;
@@ -28,6 +31,8 @@ interface StatsTracker {
   network: number;
   unknown: number;
   latencies: number[];
+  latencyCount: number;
+  latencyTotal: number;
 }
 
 function emptyStats(total: number): StatsTracker {
@@ -39,12 +44,23 @@ function emptyStats(total: number): StatsTracker {
     rateLimited: 0,
     network: 0,
     unknown: 0,
-    latencies: []
+    latencies: [],
+    latencyCount: 0,
+    latencyTotal: 0
   };
 }
 
 function updateStats(stats: StatsTracker, status: CheckStatus, latencyMs: number) {
-  stats.latencies.push(latencyMs);
+  stats.latencyCount += 1;
+  stats.latencyTotal += latencyMs;
+  if (stats.latencies.length < MAX_LATENCY_SAMPLES) {
+    stats.latencies.push(latencyMs);
+  } else {
+    const replaceIndex = Math.floor(Math.random() * stats.latencyCount);
+    if (replaceIndex < MAX_LATENCY_SAMPLES) {
+      stats.latencies[replaceIndex] = latencyMs;
+    }
+  }
   if (status === "OK") {
     stats.success += 1;
   } else if (status === "INVALID") {
@@ -61,8 +77,9 @@ function updateStats(stats: StatsTracker, status: CheckStatus, latencyMs: number
 }
 
 function finalizeSummary(stats: StatsTracker): ReportSummary {
-  const totalLatency = stats.latencies.reduce((sum, val) => sum + val, 0);
-  const avgLatencyMs = stats.latencies.length ? Math.round(totalLatency / stats.latencies.length) : 0;
+  const avgLatencyMs = stats.latencyCount
+    ? Math.round(stats.latencyTotal / stats.latencyCount)
+    : 0;
   const sorted = [...stats.latencies].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   const medianLatencyMs =
@@ -126,6 +143,11 @@ export class ProcessManager {
     });
     this.stats.set(processId, emptyStats(payload.keys.length));
 
+    if (payload.serviceId === "proxy" && payload.settings.proxy?.headlessBrowser) {
+      const poolSize = payload.settings.proxy.headlessPoolSize ?? 0;
+      registerHeadlessProcess(processId, poolSize);
+    }
+
     const run = new ProcessRun({
       id: processId,
       name: payload.name,
@@ -166,6 +188,10 @@ export class ProcessManager {
               settings: meta.settings,
               summary
             });
+          }
+          const serviceId = meta?.serviceId ?? payload.serviceId;
+          if (serviceId === "proxy") {
+            unregisterHeadlessProcess(event.processId);
           }
           this.sendEvent("process-completed", event);
           this.runs.delete(event.processId);

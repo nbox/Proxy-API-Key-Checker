@@ -33,6 +33,10 @@ declare global {
         content?: string;
         error?: string;
       }>;
+      selectDirectory: (payload: { title?: string }) => Promise<{
+        canceled: boolean;
+        path?: string;
+      }>;
       fetchProxyAggregators: (payload: { urls: string[]; timeoutMs?: number }) => Promise<{
         results: { url: string; content?: string; error?: string }[];
         cancelled?: boolean;
