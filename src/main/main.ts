@@ -5,11 +5,14 @@ import { HistoryStore } from "./history";
 import { readFileWithEncoding } from "./utils";
 import { saveReport } from "./report";
 import { sanitizeErrorMessage } from "../shared/mask";
-import type { ExportFormat, ReportPayload } from "../shared/types";
+import type { ExportFormat, ProxyType, ReportPayload } from "../shared/types";
 
 let mainWindow: BrowserWindow | null = null;
 let processManager: ProcessManager | null = null;
 const proxyAggregatorControllers = new Map<string, AbortController>();
+const PROXYMANIA_BASE_URL = "https://proxymania.su/free-proxy";
+const STANDARD_USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -56,7 +59,8 @@ function requireManager() {
 async function fetchTextWithTimeout(
   url: string,
   timeoutMs: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  headers?: Record<string, string>
 ) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -72,7 +76,8 @@ async function fetchTextWithTimeout(
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
-        "User-Agent": "API Key Health Checker"
+        "User-Agent": STANDARD_USER_AGENT,
+        ...headers
       }
     });
     if (!response.ok) {
@@ -89,6 +94,10 @@ async function fetchTextWithTimeout(
       signal.removeEventListener("abort", onAbort);
     }
   }
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function registerIpcHandlers() {
@@ -227,6 +236,90 @@ function registerIpcHandlers() {
         proxyAggregatorControllers.delete(requestId);
       }
       return { results, cancelled: controller.signal.aborted };
+    }
+  );
+
+  ipcMain.handle(
+    "parse-proxymania",
+    async (
+      _event,
+      payload?: { maxMs?: number; maxPages?: number; delayMs?: number }
+    ) => {
+      const maxMs = Math.max(100, payload?.maxMs ?? 3000);
+      const maxPages = Math.min(199, Math.max(1, payload?.maxPages ?? 199));
+      const delayMs = Math.max(0, payload?.delayMs ?? 250);
+      const byType: Record<ProxyType, Set<string>> = {
+        http: new Set(),
+        https: new Set(),
+        socks4: new Set(),
+        socks5: new Set()
+      };
+      let pages = 0;
+
+      for (let page = 1; page <= maxPages; page += 1) {
+        const url = page === 1 ? PROXYMANIA_BASE_URL : `${PROXYMANIA_BASE_URL}?page=${page}`;
+        const { text, error } = await fetchTextWithTimeout(url, 20000, undefined, {
+          "User-Agent": "Mozilla/5.0",
+          Accept: "text/html,*/*"
+        });
+        if (error) {
+          return {
+            error: `${url}: ${error}`,
+            pages,
+            maxMs,
+            total: 0,
+            byType: {
+              http: [],
+              https: [],
+              socks4: [],
+              socks5: []
+            }
+          };
+        }
+
+        const rowRe =
+          /(\d{1,3}(?:\.\d{1,3}){3}:\d{2,5}).*?\b(HTTP|HTTPS|SOCKS5|SOCKS4)\b.*?(\d+)\s*ms/gis;
+        const matches = text ? [...text.matchAll(rowRe)] : [];
+        if (matches.length === 0) {
+          break;
+        }
+        pages += 1;
+        for (const match of matches) {
+          const hostPort = match[1];
+          const typeRaw = match[2];
+          const ms = Number.parseInt(match[3], 10);
+          if (!Number.isFinite(ms) || ms > maxMs) {
+            continue;
+          }
+          const typeKey = typeRaw.toLowerCase();
+          if (
+            typeKey === "http" ||
+            typeKey === "https" ||
+            typeKey === "socks4" ||
+            typeKey === "socks5"
+          ) {
+            byType[typeKey].add(hostPort);
+          }
+        }
+
+        if (delayMs > 0 && page < maxPages) {
+          await sleep(delayMs);
+        }
+      }
+
+      const outputByType = {
+        http: Array.from(byType.http).sort(),
+        https: Array.from(byType.https).sort(),
+        socks4: Array.from(byType.socks4).sort(),
+        socks5: Array.from(byType.socks5).sort()
+      };
+      const total =
+        outputByType.http.length +
+        outputByType.https.length +
+        outputByType.socks4.length +
+        outputByType.socks5.length;
+
+      return { pages, maxMs, total, byType: outputByType };
     }
   );
 

@@ -149,7 +149,7 @@ jobs:
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
           tag_name: ${{ needs.version-check.outputs.tag }}
-          name: API Key Health Checker ${{ needs.version-check.outputs.version }}
+          name: Proxy & API Key Checker ${{ needs.version-check.outputs.version }}
           draft: false
           prerelease: false
           generate_release_notes: true
@@ -173,13 +173,13 @@ jobs:
           VERSION="${{ needs.version-check.outputs.version }}"
           ARM_SHA="${{ steps.dmg_shas.outputs.ARM_SHA }}"
           INTEL_SHA="${{ steps.dmg_shas.outputs.INTEL_SHA }}"
-          CASK="tap/Casks/api-key-health-checker.rb"
+          CASK="tap/Casks/proxy-api-key-checker.rb"
 
           perl -i -pe 's/^  version ".*"$/  version "'"$VERSION"'"/' "$CASK"
           perl -0777 -i -pe 's/sha256 arm:\s*".*?",\s*\n\s*intel:\s*".*?"/sha256 arm:   "'"$ARM_SHA"'",\n         intel: "'"$INTEL_SHA"'"/s' "$CASK"
 
           git -C tap config user.name "github-actions[bot]"
           git -C tap config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git -C tap add Casks/api-key-health-checker.rb
-          git -C tap commit -m "api-key-health-checker $VERSION" || exit 0
+          git -C tap add Casks/proxy-api-key-checker.rb
+          git -C tap commit -m "proxy-api-key-checker $VERSION" || exit 0
           git -C tap push

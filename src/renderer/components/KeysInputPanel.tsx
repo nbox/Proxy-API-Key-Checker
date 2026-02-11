@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { t, type Locale } from "../lib/i18n";
 import { parseAggregatorUrls } from "../lib/proxy";
 import httpAggregators from "../lib/proxyAggregators/http.txt?raw";
@@ -25,6 +26,14 @@ interface KeysInputPanelProps {
   onProxyAggregatorsChange?: (value: string) => void;
   proxyAggregatorErrors?: string[];
   proxyAggregatorsLoading?: boolean;
+  proxyParserActions?: {
+    id: string;
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+  }[];
+  proxyParserInfo?: string | null;
+  proxyParserError?: string | null;
 }
 
 export function KeysInputPanel({
@@ -46,7 +55,10 @@ export function KeysInputPanel({
   proxyAggregatorsText,
   onProxyAggregatorsChange,
   proxyAggregatorErrors,
-  proxyAggregatorsLoading
+  proxyAggregatorsLoading,
+  proxyParserActions,
+  proxyParserInfo,
+  proxyParserError
 }: KeysInputPanelProps) {
   const inputTitle = isProxy ? t(locale, "proxyInputTitle") : t(locale, "keysInputTitle");
   const inputHint = isProxy ? t(locale, "proxyInputHint") : t(locale, "keysInputHint");
@@ -55,6 +67,7 @@ export function KeysInputPanel({
   const limitWarning = isProxy ? t(locale, "proxyLimitWarning") : t(locale, "limitWarning");
   const placeholder = isProxy ? "USER:PASS@IP:PORT or IP:PORT" : "sk-...";
   const aggregatorsValue = proxyAggregatorsText ?? "";
+  const [showAggregatorPresets, setShowAggregatorPresets] = useState(false);
 
   const appendAggregators = (content: string) => {
     if (!onProxyAggregatorsChange) {
@@ -153,6 +166,35 @@ export function KeysInputPanel({
               <button
                 className="rounded-full border border-ink-200 bg-white/70 px-3 py-1 text-[10px] font-semibold text-ink-600"
                 type="button"
+                onClick={() => setShowAggregatorPresets((prev) => !prev)}
+              >
+                {t(locale, "proxyAggregatorsPublicList")}
+              </button>
+              {proxyParserActions?.map((action) => (
+                <button
+                  key={action.id}
+                  className="rounded-full border border-ink-200 bg-white/70 px-3 py-1 text-[10px] font-semibold text-ink-600 disabled:opacity-60"
+                  type="button"
+                  onClick={action.onClick}
+                  disabled={action.disabled}
+                >
+                  {action.label}
+                </button>
+              ))}
+              <button
+                className="rounded-full border border-ink-200 bg-white/70 px-3 py-1 text-[10px] font-semibold text-ink-600"
+                type="button"
+                onClick={clearAggregators}
+              >
+                {t(locale, "proxyAggregatorsClear")}
+              </button>
+            </div>
+          </div>
+          {showAggregatorPresets ? (
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                className="rounded-full border border-ink-200 bg-white/70 px-3 py-1 text-[10px] font-semibold text-ink-600"
+                type="button"
                 onClick={() => appendAggregators(httpAggregators)}
               >
                 {t(locale, "proxyAggregatorsAddHttp")}
@@ -178,15 +220,8 @@ export function KeysInputPanel({
               >
                 {t(locale, "proxyAggregatorsAddSocks5")}
               </button>
-              <button
-                className="rounded-full border border-ink-200 bg-white/70 px-3 py-1 text-[10px] font-semibold text-ink-600"
-                type="button"
-                onClick={clearAggregators}
-              >
-                {t(locale, "proxyAggregatorsClear")}
-              </button>
             </div>
-          </div>
+          ) : null}
           <textarea
             className="mt-2 h-24 w-full rounded-2xl border border-white/60 bg-white/70 p-3 text-xs text-ink-600"
             placeholder="https://example.com/proxies.txt"
@@ -206,6 +241,12 @@ export function KeysInputPanel({
                 <div key={error}>{error}</div>
               ))}
             </div>
+          ) : null}
+          {proxyParserInfo ? (
+            <div className="mt-2 text-xs text-ink-500">{proxyParserInfo}</div>
+          ) : null}
+          {proxyParserError ? (
+            <div className="mt-2 text-xs text-rose-600">{proxyParserError}</div>
           ) : null}
         </div>
       ) : null}

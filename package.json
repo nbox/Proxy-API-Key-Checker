@@ -1,5 +1,5 @@
 {
-  "name": "api-key-health-checker",
+  "name": "proxy-api-key-checker",
   "version": "1.1.0",
   "description": "Desktop app to validate API keys for OpenAI, Gemini, YouTube, and custom endpoints with batch checks, rate limits, and reports.",
   "license": "BSD-3-Clause",
@@ -35,11 +35,11 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.nbox.api-key-health-checker",
-    "productName": "API Key Health Checker",
+    "appId": "com.nbox.proxy-api-key-checker",
+    "productName": "Proxy & API Key Checker",
     "afterPack": "build/afterPack.cjs",
     "mac": {
-      "artifactName": "API Key Health Checker-${version}-${arch}.${ext}",
+      "artifactName": "Proxy & API Key Checker-${version}-${arch}.${ext}",
       "icon": "resources/icon.icns",
       "target": [
         {

@@ -19,6 +19,8 @@ const DEFAULT_HTML_BYTES = DEFAULT_HTML_MAX_KB * 1024;
 const DEFAULT_SCREENSHOT_MAX_FILES = 200;
 const SCREENSHOT_QUALITY = 70;
 const SCHEME_PREFIX = /^(https?|socks4|socks5):\/\//i;
+const STANDARD_USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 type ProxyRequestResult = {
   statusCode?: number;
@@ -268,7 +270,7 @@ function requestWithAgent(options: {
         port: targetUrl.port ? Number(targetUrl.port) : undefined,
         path: `${targetUrl.pathname}${targetUrl.search}`,
         headers: {
-          "User-Agent": "API Key Health Checker",
+          "User-Agent": STANDARD_USER_AGENT,
           Connection: "close",
           Accept: "*/*",
           "Accept-Encoding": "identity"
@@ -821,7 +823,7 @@ async function requestViaSocks(options: {
         const request = [
           `${method} ${path || "/"} HTTP/1.1`,
           `Host: ${hostHeader}`,
-          "User-Agent: API Key Health Checker",
+          `User-Agent: ${STANDARD_USER_AGENT}`,
           "Connection: close",
           "Accept: */*",
           "Accept-Encoding: identity",
@@ -1220,7 +1222,7 @@ async function requestViaHeadlessWithSession(options: {
 
     function onLogin(
       event: Electron.Event,
-      _details: Electron.AuthenticationResponseDetails,
+      _details: Electron.LoginAuthenticationResponseDetails,
       authInfo: Electron.AuthInfo,
       callback: (username?: string, password?: string) => void
     ) {
@@ -1352,7 +1354,7 @@ async function requestViaHeadlessWithSession(options: {
     window.webContents.once("did-finish-load", onFinish);
 
     window.webContents
-      .loadURL(targetUrl.toString(), { userAgent: "API Key Health Checker" })
+      .loadURL(targetUrl.toString(), { userAgent: STANDARD_USER_AGENT })
       .catch((error) => {
         finish({ error });
       });

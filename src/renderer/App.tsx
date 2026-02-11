@@ -5,6 +5,7 @@ import type {
   ExportFormat,
   ProcessSettings,
   ProcessStatus,
+  ProxyType,
   ReportResultItem,
   ServiceId
 } from "../shared/types";
@@ -249,6 +250,9 @@ export default function App() {
   );
   const [proxyAggregatorErrors, setProxyAggregatorErrors] = useState<string[]>([]);
   const [proxyAggregatorsLoading, setProxyAggregatorsLoading] = useState(false);
+  const [proxymaniaLoading, setProxymaniaLoading] = useState(false);
+  const [proxyParserInfo, setProxyParserInfo] = useState<string | null>(null);
+  const [proxyParserError, setProxyParserError] = useState<string | null>(null);
   const [maxKeysPerRun, setMaxKeysPerRun] = useState(200);
   const [maxProxiesPerRun, setMaxProxiesPerRun] = useState(50000);
   const [processes, setProcesses] = useState<ProcessUI[]>([]);
@@ -291,6 +295,15 @@ export default function App() {
     updateKeyText("proxy", "");
     updateImportInfo("proxy", null);
     updateImportError("proxy", null);
+  };
+  const appendProxyEntries = (entries: string[]) => {
+    if (entries.length === 0) {
+      return { added: 0, total: 0 };
+    }
+    const existing = parseKeysFromText(keyTexts.proxy ?? "", false);
+    const merged = mergeProxyLists(existing, entries);
+    updateKeyText("proxy", merged.join("\n"));
+    return { added: merged.length - existing.length, total: entries.length };
   };
   const moveValidProxiesToList = (proxies: string[]) => {
     const unique = Array.from(
@@ -492,6 +505,36 @@ export default function App() {
     } catch (error) {
       updateImportInfo(serviceId, null);
       updateImportError(serviceId, t(locale, "failedReadFile"));
+    }
+  }
+
+  async function handleProxymaniaParse() {
+    if (!isProxyService || proxymaniaLoading) {
+      return;
+    }
+    setProxyParserError(null);
+    setProxyParserInfo(null);
+    setProxymaniaLoading(true);
+    try {
+      const response = await window.api.parseProxymania({ maxMs: 3000 });
+      if (response.error) {
+        setProxyParserError(`${t(locale, "proxyParserProxymania")}: ${response.error}`);
+        return;
+      }
+      const order: ProxyType[] = ["http", "https", "socks4", "socks5"];
+      const lines = order.flatMap((type) =>
+        (response.byType?.[type] ?? []).map((proxy) => `${type}://${proxy}`)
+      );
+      const { added } = appendProxyEntries(lines);
+      const countLabel = t(locale, "proxyCount").toLowerCase();
+      setProxyParserInfo(
+        `${t(locale, "proxyParserProxymania")}: ${added} ${countLabel}`
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to parse proxymania";
+      setProxyParserError(`${t(locale, "proxyParserProxymania")}: ${message}`);
+    } finally {
+      setProxymaniaLoading(false);
     }
   }
 
@@ -746,6 +789,18 @@ export default function App() {
         (!parsedKeys.length && proxyAggregatorUrls.length === 0) ||
         proxyAggregatorsLoading
       : !limitedKeys.length);
+  const proxyParserActions = isProxyService
+    ? [
+        {
+          id: "proxymania",
+          label: proxymaniaLoading
+            ? t(locale, "proxyParserProxymaniaLoading")
+            : t(locale, "proxyParserProxymania"),
+          onClick: handleProxymaniaParse,
+          disabled: proxymaniaLoading
+        }
+      ]
+    : undefined;
 
   return (
     <div className="app-shell min-h-screen px-6 pb-16 pt-10">
@@ -884,6 +939,9 @@ export default function App() {
           }}
           proxyAggregatorErrors={proxyAggregatorErrors}
           proxyAggregatorsLoading={proxyAggregatorsLoading}
+          proxyParserActions={proxyParserActions}
+          proxyParserInfo={proxyParserInfo}
+          proxyParserError={proxyParserError}
         />
         <ServiceSettingsPanel
           locale={locale}

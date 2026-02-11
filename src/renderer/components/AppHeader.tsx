@@ -37,7 +37,7 @@ export function AppHeader({
               {t(locale, "appTitle")}
             </h1>
             <a
-              href="https://github.com/nbox/API-Key-Health-Checker"
+              href="https://github.com/nbox/Proxy-API-Key-Checker"
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink-500 underline-offset-4 transition hover:text-ink-700 hover:underline"
               target="_blank"
               rel="noreferrer"

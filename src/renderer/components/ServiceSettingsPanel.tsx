@@ -152,6 +152,7 @@ export function ServiceSettingsPanel({
         ...prev,
         concurrency: 8,
         perProcessMaxRps: 8,
+        timeoutMs: 10000,
         proxy: {
           ...current,
           checkMode: "url",
@@ -159,6 +160,7 @@ export function ServiceSettingsPanel({
           htmlCheck: true,
           htmlCheckText: "<title>Rick Astley",
           headlessBrowser: true,
+          speedLimitMs: 10000,
           htmlCheckTexts: []
         }
       };

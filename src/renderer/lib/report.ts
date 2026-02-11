@@ -103,7 +103,7 @@ export function buildReportPayload(options: {
 }) {
   const summary = options.summary ?? summarize(options.results);
   const meta = {
-    app: "API Key Health Checker",
+    app: "Proxy & API Key Checker",
     version: options.appVersion,
     serviceId: options.serviceId,
     checkMethod: options.checkMethod,

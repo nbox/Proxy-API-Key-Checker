@@ -115,12 +115,15 @@ type CopyKey =
   | "proxyAggregatorsHint"
   | "proxyAggregatorsFailed"
   | "proxyAggregatorsLoading"
+  | "proxyAggregatorsPublicList"
   | "proxyAggregatorsAddHttp"
   | "proxyAggregatorsAddHttps"
   | "proxyAggregatorsAddSocks4"
   | "proxyAggregatorsAddSocks5"
   | "proxyAggregatorsClear"
   | "proxyAggregatorsCancel"
+  | "proxyParserProxymania"
+  | "proxyParserProxymaniaLoading"
   | "proxyListEmpty"
   | "proxyTypesLabel"
   | "proxySpeedTooltip"
@@ -159,7 +162,7 @@ type CopyKey =
 
 export const copy: Record<Locale, Record<CopyKey, string>> = {
   en: {
-    appTitle: "API Key Health Checker",
+    appTitle: "Proxy & API Key Checker",
     serviceLabel: "Service",
     networkOnline: "Online",
     networkOffline: "Offline",
@@ -276,12 +279,15 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
       "One URL per line. Lines starting with # are ignored. Loaded on start and merged with manual list.",
     proxyAggregatorsFailed: "Failed to load aggregators",
     proxyAggregatorsLoading: "Loading aggregators...",
+    proxyAggregatorsPublicList: "Public proxy aggregators",
     proxyAggregatorsAddHttp: "Add HTTP",
     proxyAggregatorsAddHttps: "Add HTTPS",
     proxyAggregatorsAddSocks4: "Add SOCKS4",
     proxyAggregatorsAddSocks5: "Add SOCKS5",
     proxyAggregatorsClear: "Clear",
     proxyAggregatorsCancel: "Cancel",
+    proxyParserProxymania: "Parser proxymania",
+    proxyParserProxymaniaLoading: "Parsing proxymania...",
     proxyListEmpty: "Proxy list is empty",
     proxyTypesLabel: "Proxy types",
     proxySpeedTooltip: "Soft latency limit; if exceeded, result becomes too_slow.",
@@ -320,7 +326,7 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     maxProxies: "Max proxies per run"
   },
   es: {
-    appTitle: "API Key Health Checker",
+    appTitle: "Proxy & API Key Checker",
     serviceLabel: "Servicio",
     networkOnline: "En línea",
     networkOffline: "Sin conexión",
@@ -438,12 +444,15 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
       "Una URL por línea. Las líneas con # se ignoran. Se cargan al iniciar y se fusionan con la lista manual.",
     proxyAggregatorsFailed: "No se pudieron cargar los agregadores",
     proxyAggregatorsLoading: "Cargando agregadores...",
+    proxyAggregatorsPublicList: "Lista de agregadores públicos de proxy",
     proxyAggregatorsAddHttp: "Agregar HTTP",
     proxyAggregatorsAddHttps: "Agregar HTTPS",
     proxyAggregatorsAddSocks4: "Agregar SOCKS4",
     proxyAggregatorsAddSocks5: "Agregar SOCKS5",
     proxyAggregatorsClear: "Limpiar",
     proxyAggregatorsCancel: "Cancelar",
+    proxyParserProxymania: "Parser proxymania",
+    proxyParserProxymaniaLoading: "Analizando proxymania...",
     proxyListEmpty: "La lista de proxies está vacía",
     proxyTypesLabel: "Tipos de proxy",
     proxySpeedTooltip: "Límite suave de latencia; si se supera, resultado too_slow.",
@@ -482,7 +491,7 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
     maxProxies: "Máx. proxies por ejecución"
   },
   ru: {
-    appTitle: "API Key Health Checker",
+    appTitle: "Proxy & API Key Checker",
     serviceLabel: "Сервис",
     networkOnline: "Онлайн",
     networkOffline: "Оффлайн",
@@ -600,12 +609,15 @@ export const copy: Record<Locale, Record<CopyKey, string>> = {
       "Один URL на строку. Строки с # игнорируются. Загружаются при старте и объединяются с ручным списком.",
     proxyAggregatorsFailed: "Не удалось загрузить агрегаторы",
     proxyAggregatorsLoading: "Загрузка агрегаторов...",
+    proxyAggregatorsPublicList: "Список публичных агрегаторов прокси",
     proxyAggregatorsAddHttp: "Добавить HTTP",
     proxyAggregatorsAddHttps: "Добавить HTTPS",
     proxyAggregatorsAddSocks4: "Добавить SOCKS4",
     proxyAggregatorsAddSocks5: "Добавить SOCKS5",
     proxyAggregatorsClear: "Очистить",
     proxyAggregatorsCancel: "Отменить",
+    proxyParserProxymania: "Парсер proxymania",
+    proxyParserProxymaniaLoading: "Парсим proxymania...",
     proxyListEmpty: "Список прокси пуст",
     proxyTypesLabel: "Типы прокси",
     proxySpeedTooltip: "Мягкий лимит задержки; при превышении результат too_slow.",

@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="assets/logo.png" width="220" alt="Логотип API Key Health Checker" />
+  <img src="assets/logo.png" width="220" alt="Логотип Proxy & API Key Checker" />
 </p>
 
-# API Key Health Checker
+# Proxy & API Key Checker
 
-GitHub: https://github.com/nbox/API-Key-Health-Checker
+GitHub: https://github.com/nbox/Proxy-API-Key-Checker
 
 🌐 Читать на: [English](README.md) | [Русский](README.ru.md) | [Español](README.es.md)
 
@@ -17,18 +17,18 @@ GitHub: https://github.com/nbox/API-Key-Health-Checker
 Установка:
 
 ```bash
-brew install --cask nbox/tap/api-key-health-checker
+brew install --cask nbox/tap/proxy-api-key-checker
 ```
 
 Удаление:
 
 ```bash
-brew uninstall --cask --zap api-key-health-checker
+brew uninstall --cask --zap proxy-api-key-checker
 ```
 
 ## Скачать
 
-Релизы: https://github.com/nbox/API-Key-Health-Checker/releases
+Релизы: https://github.com/nbox/Proxy-API-Key-Checker/releases
 
 ## macOS Gatekeeper
 
@@ -38,13 +38,13 @@ brew uninstall --cask --zap api-key-health-checker
 
 - Откройте приложение как обычно (двойным кликом).
 - Откройте System Settings -> Privacy & Security.
-- В предупреждении о API Key Health Checker нажмите Open Anyway.
+- В предупреждении о Proxy & API Key Checker нажмите Open Anyway.
 - Подтвердите, нажав Open.
 
 Вариант 2: Снять атрибут карантина
 
 ```bash
-xattr -dr com.apple.quarantine "/Applications/API Key Health Checker.app"
+xattr -dr com.apple.quarantine "/Applications/Proxy & API Key Checker.app"
 ```
 
 ## Возможности
@@ -92,15 +92,15 @@ npm run dev
 ## Сборка
 
 ```bash
-git clone https://github.com/nbox/API-Key-Health-Checker.git
-cd API-Key-Health-Checker
+git clone https://github.com/nbox/Proxy-API-Key-Checker.git
+cd Proxy-API-Key-Checker
 npm install
 npm run build
 npm run dist
 ```
 
 Сборочные артефакты записываются в `dist/`.
-DMG: `release/API Key Health Checker-1.0.0-{arch}.dmg`.
+DMG: `release/Proxy & API Key Checker-1.0.0-{arch}.dmg`.
 macOS: запускайте `npm run dist` на macOS — получите `.dmg` в `release/`.
 Windows: запускайте `npm run dist` на Windows — получите установщик `.exe` в `release/`.
 

@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="assets/logo.png" width="220" alt="API Key Health Checker logo " />
+  <img src="assets/logo.png" width="220" alt="Proxy & API Key Checker logo " />
 </p>
 
-# API Key Health Checker
+# Proxy & API Key Checker
 
 🌐 Read in: [English](README.md) | [Русский](README.ru.md) | [Español](README.es.md)
 
-Desktop app to validate API keys for popular services and run batch checks with rate limits and reports. Supports OpenAI (ChatGPT), Google Gemini, YouTube Data API, and custom endpoints.
+Desktop app to validate API keys and check proxy lists with batch runs, rate limits, and reports. Supports OpenAI (ChatGPT), Google Gemini, YouTube Data API, custom endpoints, and HTTP/HTTPS/SOCKS proxy validation.
 
 ![Screenshot](assets/screenshot.png)
 
@@ -15,18 +15,18 @@ Desktop app to validate API keys for popular services and run batch checks with 
 Install:
 
 ```bash
-brew install --cask nbox/tap/api-key-health-checker
+brew install --cask nbox/tap/proxy-api-key-checker
 ```
 
 Uninstall:
 
 ```bash
-brew uninstall --cask --zap api-key-health-checker
+brew uninstall --cask --zap proxy-api-key-checker
 ```
 
 ## Download
 
-Releases: https://github.com/nbox/API-Key-Health-Checker/releases
+Releases: https://github.com/nbox/Proxy-API-Key-Checker/releases
 
 ## macOS Gatekeeper
 
@@ -36,13 +36,13 @@ Option 1: Allow in System Settings -> Privacy & Security
 
 - Try to open the app normally (double-click).
 - Open System Settings -> Privacy & Security.
-- Under the warning about API Key Health Checker, click Open Anyway.
+- Under the warning about Proxy & API Key Checker, click Open Anyway.
 - Confirm by clicking Open.
 
 Option 2: Remove the quarantine attribute
 
 ```bash
-xattr -dr com.apple.quarantine "/Applications/API Key Health Checker.app"
+xattr -dr com.apple.quarantine "/Applications/Proxy & API Key Checker.app"
 ```
 
 ## Features
@@ -57,7 +57,8 @@ xattr -dr com.apple.quarantine "/Applications/API Key Health Checker.app"
 ## Proxy Checker
 
 - Types: HTTP, HTTPS, SOCKS4, SOCKS5; per-line scheme (`http://`, `https://`, `socks4://`, `socks5://`) forces the type.
-- Inputs: manual list, file import, and aggregator URLs (one per line; `#` comments allowed).
+- Inputs: manual list, file import, and aggregator URLs (one per line; `#` comments allowed). Quick presets are available under "Public proxy aggregators".
+- Parser: built-in Proxymania button fetches public proxies and auto-adds by type (filtered by latency <= 3000ms).
 - Formats: `ip:port` or `user:pass@ip:port`; auto-normalize and dedupe.
 - Check modes: validity or URL access with a configurable target URL.
 - HTML search: one or multiple texts (OR). Non-headless reads only the first N KB.
@@ -90,15 +91,15 @@ npm run dev
 ## Build
 
 ```bash
-git clone https://github.com/nbox/API-Key-Health-Checker.git
-cd API-Key-Health-Checker
+git clone https://github.com/nbox/Proxy-API-Key-Checker.git
+cd Proxy-API-Key-Checker
 npm install
 npm run build
 npm run dist
 ```
 
 Build output is written to `dist/`.
-DMG output: `release/API Key Health Checker-1.0.0-{arch}.dmg`.
+DMG output: `release/Proxy & API Key Checker-1.0.0-{arch}.dmg`.
 macOS build: run `npm run dist` on macOS to generate a `.dmg` in `release/`.
 Windows build: run `npm run dist` on Windows to generate a `.exe` installer in `release/`.
 

@@ -3,6 +3,7 @@ import type {
   LogEvent,
   ProcessCompletedEvent,
   ProcessProgressEvent,
+  ProxyType,
   ReportPayload
 } from "../shared/types";
 
@@ -40,6 +41,17 @@ declare global {
       fetchProxyAggregators: (payload: { urls: string[]; timeoutMs?: number }) => Promise<{
         results: { url: string; content?: string; error?: string }[];
         cancelled?: boolean;
+      }>;
+      parseProxymania: (payload?: {
+        maxMs?: number;
+        maxPages?: number;
+        delayMs?: number;
+      }) => Promise<{
+        pages: number;
+        maxMs: number;
+        total: number;
+        byType: Record<ProxyType, string[]>;
+        error?: string;
       }>;
       cancelProxyAggregators: (payload: { requestId: string }) => Promise<void>;
       startCheck: (payload: unknown) => Promise<StartProcessResponse>;

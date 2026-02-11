@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld("api", {
     timeoutMs?: number;
     requestId?: string;
   }) => ipcRenderer.invoke("fetch-proxy-aggregators", payload),
+  parseProxymania: (payload?: { maxMs?: number; maxPages?: number; delayMs?: number }) =>
+    ipcRenderer.invoke("parse-proxymania", payload),
   cancelProxyAggregators: (payload: { requestId: string }) =>
     ipcRenderer.invoke("cancel-proxy-aggregators", payload),
   startCheck: (payload: unknown) => ipcRenderer.invoke("start-check", payload),

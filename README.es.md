@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="assets/logo.png" width="220" alt="Logo de API Key Health Checker" />
+  <img src="assets/logo.png" width="220" alt="Logo de Proxy & API Key Checker" />
 </p>
 
-# API Key Health Checker
+# Proxy & API Key Checker
 
-GitHub: https://github.com/nbox/API-Key-Health-Checker
+GitHub: https://github.com/nbox/Proxy-API-Key-Checker
 
 🌐 Leer en: [English](README.md) | [Русский](README.ru.md) | [Español](README.es.md)
 
@@ -17,18 +17,18 @@ Aplicación de escritorio para validar claves API de servicios populares y ejecu
 Instalar:
 
 ```bash
-brew install --cask nbox/tap/api-key-health-checker
+brew install --cask nbox/tap/proxy-api-key-checker
 ```
 
 Desinstalar:
 
 ```bash
-brew uninstall --cask --zap api-key-health-checker
+brew uninstall --cask --zap proxy-api-key-checker
 ```
 
 ## Descargar
 
-Lanzamientos: https://github.com/nbox/API-Key-Health-Checker/releases
+Lanzamientos: https://github.com/nbox/Proxy-API-Key-Checker/releases
 
 ## macOS Gatekeeper
 
@@ -38,13 +38,13 @@ Opción 1: Permitir en System Settings -> Privacy & Security
 
 - Intenta abrir la app de forma normal (doble clic).
 - Abre System Settings -> Privacy & Security.
-- En la advertencia sobre API Key Health Checker, haz clic en Open Anyway.
+- En la advertencia sobre Proxy & API Key Checker, haz clic en Open Anyway.
 - Confirma pulsando Open.
 
 Opción 2: Eliminar el atributo de cuarentena
 
 ```bash
-xattr -dr com.apple.quarantine "/Applications/API Key Health Checker.app"
+xattr -dr com.apple.quarantine "/Applications/Proxy & API Key Checker.app"
 ```
 
 ## Funciones
@@ -92,15 +92,15 @@ npm run dev
 ## Compilación
 
 ```bash
-git clone https://github.com/nbox/API-Key-Health-Checker.git
-cd API-Key-Health-Checker
+git clone https://github.com/nbox/Proxy-API-Key-Checker.git
+cd Proxy-API-Key-Checker
 npm install
 npm run build
 npm run dist
 ```
 
 La salida de compilación se guarda en `dist/`.
-DMG: `release/API Key Health Checker-1.0.0-{arch}.dmg`.
+DMG: `release/Proxy & API Key Checker-1.0.0-{arch}.dmg`.
 macOS: ejecuta `npm run dist` en macOS para generar un `.dmg` en `release/`.
 Windows: ejecuta `npm run dist` en Windows para generar un instalador `.exe` en `release/`.
 
